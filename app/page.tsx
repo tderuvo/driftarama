@@ -38,45 +38,22 @@ function DriftIntoTray({ size = 'md' }: { size?: 'sm' | 'md' }) {
       className="mx-auto"
       aria-hidden="true"
     >
-      {/* Tray */}
       <rect x="14" y="58" width="80" height="22" rx="5" fill="#F0EDE4" stroke="#C8C4B8" strokeWidth="2" />
       <line x1="14" y1="68" x2="94" y2="68" stroke="#D8D5CA" strokeWidth="1.2" />
-
-      {/* Note card drifting in */}
       <rect
-        x="32"
-        y="18"
-        width="44"
-        height="30"
-        rx="5"
-        fill="white"
-        stroke="#D0CCC0"
-        strokeWidth="1.5"
+        x="32" y="18" width="44" height="30" rx="5"
+        fill="white" stroke="#D0CCC0" strokeWidth="1.5"
         transform="rotate(-7 54 33)"
       />
       <rect x="38" y="24" width="24" height="4" rx="2" fill="#E0DDD4" transform="rotate(-7 54 33)" />
       <rect x="38" y="31" width="16" height="3" rx="1.5" fill="#EAE8E0" transform="rotate(-7 54 33)" />
-
-      {/* Downward drift motion */}
-      <path
-        d="M54 50 L54 56"
-        stroke="#C0BCB0"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeDasharray="2 2.5"
-      />
-      <path
-        d="M51 54 L54 57 L57 54"
-        stroke="#C0BCB0"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M54 50 L54 56" stroke="#C0BCB0" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 2.5" />
+      <path d="M51 54 L54 57 L57 54" stroke="#C0BCB0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-// ─── Hero Image (client — handles missing file gracefully) ───────────────────
+// ─── Hero Image ───────────────────────────────────────────────────────────────
 
 function HeroImage() {
   const [error, setError] = useState(false)
@@ -95,7 +72,7 @@ function HeroImage() {
       ) : (
         <Image
           src="/hero.png"
-          alt="Driftarama — tasks, projects, and ideas in one calm place"
+          alt="Driftarama — a simple place to keep track of tasks, projects, and follow-ups"
           width={1200}
           height={750}
           className="w-full h-auto block"
@@ -161,11 +138,12 @@ function Hero() {
 
         <div className="space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight text-[#1C1C19]">
-            Tasks, projects, ideas —<br />
-            <span className="text-[#9A9890]">just drift them in.</span>
+            Got something to handle?
+            <br />
+            <span className="text-[#9A9890]">Jot it down before it slips.</span>
           </h1>
           <p className="text-lg md:text-xl text-[#6B6860] leading-relaxed max-w-md">
-            No pressure. No rigid systems. Just a calm place for everything on your mind.
+            A simple, stress-free place to keep track of tasks, projects, and follow-ups — without turning your life into a system.
           </p>
         </div>
 
@@ -184,12 +162,8 @@ function Hero() {
           </a>
         </div>
 
-        <p className="text-sm text-[#A8A69F] flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0" aria-hidden="true">
-            <rect x="3" y="6.5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M5 6.5V4.5a2 2 0 0 1 4 0v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          Private by design. Yours and yours alone.
+        <p className="text-sm text-[#A8A69F]">
+          No pressure. No rigid structure. Just a place to start.
         </p>
 
       </div>
@@ -205,24 +179,38 @@ function Hero() {
   )
 }
 
+// ─── Supporting Copy ──────────────────────────────────────────────────────────
+
+function SupportingCopy() {
+  return (
+    <section className="max-w-6xl mx-auto px-6 pb-20">
+      <div className="max-w-lg border-l-2 border-[#F0C040] pl-6 space-y-1">
+        <p className="text-lg text-[#3A3830] font-medium">You don&apos;t need to plan it all out.</p>
+        <p className="text-lg text-[#6B6860]">Just write it down.</p>
+        <p className="text-lg text-[#9A9890]">You can figure out the rest later.</p>
+      </div>
+    </section>
+  )
+}
+
 // ─── How It Works ─────────────────────────────────────────────────────────────
 
 function HowItWorks() {
   const steps = [
     {
       number: '01',
-      title: 'Add a drift',
-      description: "Type anything — a task, a thought, or something you don't want to forget.",
+      title: 'Jot it down',
+      description: 'Write the thing you need to handle — however it comes to mind.',
     },
     {
       number: '02',
-      title: 'Let it sit',
-      description: "No deadlines. No reminders. It's there when you need it.",
+      title: 'Let it grow',
+      description: 'As things come up, add to it. No structure needed.',
     },
     {
       number: '03',
-      title: 'Pick it up later',
-      description: "With context, notes, and everything you've added along the way.",
+      title: 'Work through it',
+      description: 'Everything stays in one place, so nothing slips.',
     },
   ]
 
@@ -256,8 +244,8 @@ function HowItWorks() {
 // ─── Three Columns ────────────────────────────────────────────────────────────
 
 function ThreeColumns() {
-  const driftTypes = ['a task', 'a follow-up', 'a note', 'an idea', 'something to remember']
-  const sources = ['Emails', 'Conversations', 'Random thoughts', 'Reminders', 'And more']
+  const driftTypes = ['a task', 'a follow-up', 'a quick note', 'an idea', 'something to remember']
+  const moments = ['after a meeting', 'mid-task', 'when you remember something', 'out of nowhere', 'all the time']
 
   return (
     <section id="why" className="py-24 max-w-6xl mx-auto px-6">
@@ -267,8 +255,9 @@ function ThreeColumns() {
         <div className="flex flex-col gap-5">
           <h3 className="text-xl font-bold text-[#1C1C19]">What is a drift?</h3>
           <p className="text-[#6B6860] leading-relaxed">
-            A drift is just something on your mind.
+            A drift is simply something you need to handle.
           </p>
+          <p className="text-sm text-[#8A8880]">It might start as:</p>
           <div className="flex flex-wrap gap-2">
             {driftTypes.map(label => (
               <span
@@ -279,53 +268,56 @@ function ThreeColumns() {
               </span>
             ))}
           </div>
+          <p className="text-sm text-[#8A8880] leading-relaxed">
+            Then over time — it becomes whatever it needs to be.
+          </p>
           <p className="text-sm text-[#9A9890] leading-relaxed mt-auto pt-3 border-t border-[#EAE7DE]">
-            Instead of organizing it perfectly, you just drift it in.
+            You don&apos;t have to define it upfront. Just start.
           </p>
         </div>
 
-        {/* Col 2: It works the way you think */}
+        {/* Col 2: It works the way you already think */}
         <div className="flex flex-col gap-5">
-          <h3 className="text-xl font-bold text-[#1C1C19]">It works the way you think</h3>
+          <h3 className="text-xl font-bold text-[#1C1C19]">It works the way you already think</h3>
           <div className="space-y-2.5">
             <div className="flex items-start gap-3 p-3.5 bg-[#FFFBEA] rounded-xl border border-[#F5D56A]/50">
               <span className="w-2.5 h-2.5 rounded-full bg-[#F5D56A] mt-0.5 shrink-0" />
               <div>
                 <span className="text-sm font-semibold text-[#2A2A27] block leading-tight">In Progress</span>
-                <span className="text-xs text-[#8A8880] mt-0.5 block">You&apos;re working on it.</span>
+                <span className="text-xs text-[#8A8880] mt-0.5 block">you&apos;re working on it.</span>
               </div>
             </div>
             <div className="flex items-start gap-3 p-3.5 bg-[#FFF5F5] rounded-xl border border-[#F5A5A5]/40">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E87070] mt-0.5 shrink-0" />
               <div>
                 <span className="text-sm font-semibold text-[#2A2A27] block leading-tight">Needs Attention</span>
-                <span className="text-xs text-[#8A8880] mt-0.5 block">This matters right now.</span>
+                <span className="text-xs text-[#8A8880] mt-0.5 block">this needs attention.</span>
               </div>
             </div>
             <div className="flex items-start gap-3 p-3.5 bg-[#F2FBF5] rounded-xl border border-[#98D4A3]/50">
               <span className="w-2.5 h-2.5 rounded-full bg-[#6DBF8B] mt-0.5 shrink-0" />
               <div>
                 <span className="text-sm font-semibold text-[#2A2A27] block leading-tight">Done</span>
-                <span className="text-xs text-[#8A8880] mt-0.5 block">It&apos;s complete. Nice.</span>
+                <span className="text-xs text-[#8A8880] mt-0.5 block">it&apos;s done — and it feels good to see it there.</span>
               </div>
             </div>
           </div>
           <p className="text-sm text-[#9A9890] leading-relaxed mt-auto pt-3 border-t border-[#EAE7DE]">
-            No checkboxes. No rigid workflow. Just a simple visual flow.
+            No checkboxes. No rigid structure. Just a simple way to see what&apos;s going on.
           </p>
         </div>
 
         {/* Col 3: Life drifts in */}
         <div className="flex flex-col gap-5">
           <h3 className="text-xl font-bold text-[#1C1C19]">Life drifts in</h3>
-          <p className="text-[#6B6860] leading-relaxed">Things come from everywhere.</p>
+          <p className="text-[#6B6860] leading-relaxed">Things come up throughout the day.</p>
           <div className="flex flex-wrap gap-2">
-            {sources.map(source => (
+            {moments.map(moment => (
               <span
-                key={source}
+                key={moment}
                 className="text-xs font-medium px-3 py-1.5 bg-[#F4F2EB] text-[#6B6860] rounded-full border border-[#E2DFD6]"
               >
-                {source}
+                {moment}
               </span>
             ))}
           </div>
@@ -333,10 +325,99 @@ function ThreeColumns() {
             <DriftIntoTray size="sm" />
           </div>
           <p className="text-sm text-[#9A9890] leading-relaxed mt-auto pt-3 border-t border-[#EAE7DE]">
-            They don&apos;t need a category. Just drift in. When you&apos;re ready, connect them to what matters.
+            You don&apos;t need to organize it. Just jot it down before you forget.
           </p>
         </div>
 
+      </div>
+    </section>
+  )
+}
+
+// ─── Micro Example ────────────────────────────────────────────────────────────
+
+function MicroExample() {
+  return (
+    <section className="py-20 bg-[#F4F2EB]">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="max-w-xl mx-auto">
+
+          <p className="text-sm font-semibold text-[#A8A69F] uppercase tracking-widest text-center mb-8">
+            For example
+          </p>
+
+          <div className="bg-white rounded-2xl border border-[#E8E5DC] shadow-sm overflow-hidden">
+
+            {/* Starting point */}
+            <div className="px-7 pt-7 pb-5 border-b border-[#F0EDE4]">
+              <p className="text-xs text-[#B0ADA6] mb-3">You jot down one thing:</p>
+              <div className="flex items-center gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F5D56A] shrink-0" />
+                <span className="text-base font-semibold text-[#1C1C19]">Do 2025 taxes</span>
+              </div>
+            </div>
+
+            {/* Grows over time */}
+            <div className="px-7 py-5">
+              <p className="text-xs text-[#B0ADA6] mb-4">Over time, it grows into:</p>
+              <div className="space-y-3 pl-1">
+                {['Call accountant', 'Gather documents', 'Send files'].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D8D5CC] shrink-0" />
+                    <span className="text-sm text-[#5A5850]">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer note */}
+            <div className="px-7 py-4 bg-[#FAFAF8] border-t border-[#F0EDE4]">
+              <p className="text-sm text-[#9A9890]">
+                No planning required. It just builds as you go.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Value Props ──────────────────────────────────────────────────────────────
+
+function ValueProps() {
+  const props = [
+    {
+      title: 'Start simple',
+      description: 'Just write it down. No setup needed.',
+    },
+    {
+      title: 'No pressure',
+      description: 'Nothing is pushing you or reminding you constantly.',
+    },
+    {
+      title: 'Everything stays together',
+      description: 'Notes, updates, and steps stay with the thing itself.',
+    },
+    {
+      title: 'Come back anytime',
+      description: 'Pick up where you left off — without starting over.',
+    },
+  ]
+
+  return (
+    <section className="py-20 max-w-6xl mx-auto px-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {props.map((prop, i) => (
+          <div
+            key={i}
+            className="bg-[#F8F6F0] rounded-2xl p-6 border border-[#EAE7DE]"
+          >
+            <h3 className="text-base font-bold text-[#1C1C19] mb-2">{prop.title}</h3>
+            <p className="text-sm text-[#6B6860] leading-relaxed">{prop.description}</p>
+          </div>
+        ))}
       </div>
     </section>
   )
@@ -351,11 +432,11 @@ function Testimonials() {
       name: 'Sarah J.',
     },
     {
-      quote: 'I just drop things in and move on.',
+      quote: "I just jot things down and deal with them when I'm ready.",
       name: 'Mark T.',
     },
     {
-      quote: 'It feels like it keeps up with me instead of the other way around.',
+      quote: 'It feels like it keeps track of things without stressing me out.',
       name: 'Priya K.',
     },
   ]
@@ -393,12 +474,12 @@ function ClosingCTA() {
     <section className="py-32 max-w-6xl mx-auto px-6">
       <div className="max-w-lg mx-auto text-center space-y-8">
         <DriftIntoTray />
-        <div className="space-y-4">
+        <div className="space-y-3">
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-[#1C1C19] leading-tight">
-            Keep it simple.
+            Got something to handle?
           </h2>
           <p className="text-lg text-[#6B6860]">
-            Start with a list. Let everything else come naturally.
+            Jot it down. Come back to it later.
           </p>
         </div>
         <a
@@ -451,8 +532,11 @@ export default function Home() {
     <main className="bg-[#FAF8F3] text-[#1C1C19]">
       <Navbar />
       <Hero />
+      <SupportingCopy />
       <HowItWorks />
       <ThreeColumns />
+      <MicroExample />
+      <ValueProps />
       <Testimonials />
       <ClosingCTA />
       <Footer />
