@@ -529,16 +529,39 @@ function Footer() {
 
 function AppNav() {
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF8F3]/95 backdrop-blur-sm border-b border-[#EAE7DE]">
+    <header className="no-print sticky top-0 z-50 bg-[#FAF8F3]/95 backdrop-blur-sm border-b border-[#EAE7DE]">
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
 
-        <a href="/" aria-label="Home">
-          <DriftIcon className="text-[#2A2A27]" />
-        </a>
-
-        <div />
+        <div className="flex items-center gap-4">
+          <a href="/" aria-label="Home">
+            <DriftIcon className="text-[#2A2A27]" />
+          </a>
+          <div className="flex items-center gap-1">
+            <button className="text-sm font-medium text-[#2A2A27] bg-[#EEEAE0] px-3 py-1 rounded-md">
+              Open
+            </button>
+            <button className="text-sm font-medium text-[#A8A49C] px-3 py-1 rounded-md hover:bg-[#F0EDE4] hover:text-[#6B6860] transition-colors duration-150">
+              Done
+            </button>
+          </div>
+        </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              // Future: make print context-aware for selected drift notes
+              window.print()
+            }}
+            className="text-[#B0ACA4] hover:text-[#5A5850] hover:bg-[#F0EDE4] p-1.5 rounded-md transition-colors duration-150"
+            aria-label="Print"
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+              <path d="M4.5 5V2.5h6V5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="1.5" y="5" width="12" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+              <rect x="4.5" y="9" width="6" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.3" fill="white" />
+              <circle cx="11.5" cy="8" r="0.7" fill="currentColor" />
+            </svg>
+          </button>
           <button
             className="text-sm text-[#6B6860] border border-[#DDDAD2] px-4 py-1.5 rounded-lg hover:bg-[#F4F2EB] transition-colors duration-150"
           >
@@ -594,9 +617,9 @@ const mockDrifts: MockDrift[] = [
 ]
 
 const subHighlight: Record<'yellow' | 'green' | 'red', string> = {
-  yellow: 'bg-[#FEF3C7] px-1 -mx-1',
-  green:  'bg-[#D1FAE5] px-1 -mx-1',
-  red:    'bg-[#FEE2E2] px-1 -mx-1',
+  yellow: 'bg-[#FEF0A8] px-[5px] -mx-[5px]',
+  green:  'bg-[#C6F0D8] px-[5px] -mx-[5px]',
+  red:    'bg-[#FBCFCF] px-[5px] -mx-[5px]',
 }
 // MOCK_DRIFTS_END
 
@@ -608,9 +631,11 @@ function AppView() {
   }).format(new Date())
 
   return (
-    <div className="min-h-screen bg-[#FAF8F3]">
+    <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
       <AppNav />
-      <main className="max-w-180 mx-auto px-6 pt-12 pb-28">
+      <main className="max-w-180 mx-auto px-6 md:px-10 pt-12 pb-28 bg-[#FAF9F4] min-h-[calc(100vh-3.5rem)] shadow-[0_1px_16px_rgba(40,36,28,0.07),0_0_0_1px_rgba(40,36,28,0.04)] print:bg-white print:shadow-none print:max-w-none print:px-10 print:pt-8">
+
+        <div className="print-area">
 
         {/* Date */}
         <p className="text-4xl md:text-5xl font-semibold tracking-tight text-[#2A2A27] mb-10">
@@ -625,7 +650,7 @@ function AppView() {
                 <span className="text-base text-[#3A3830] font-bold tabular-nums w-5 shrink-0 text-right select-none">
                   {i + 1}
                 </span>
-                <span className="text-base text-[#1C1C19] font-semibold leading-snug">
+                <span className="text-base text-[#1C1C19] font-semibold leading-normal">
                   {drift.title}
                 </span>
               </div>
@@ -643,7 +668,9 @@ function AppView() {
           ))}
         </div>
 
-        <div className="mt-8 pl-8">
+        </div> {/* /print-area */}
+
+        <div className="no-print mt-8 pl-8">
           <button className="text-sm text-[#C0BCB4] hover:text-[#8A8880] transition-colors duration-150 cursor-default">
             + Add drift
           </button>
