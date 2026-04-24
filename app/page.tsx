@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { Show, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs'
 
 // ─── Shared: Drift Icon (wordmark glyph) ─────────────────────────────────────
 
@@ -104,18 +105,21 @@ function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3 shrink-0">
-          <a
-            href="#"
-            className="hidden sm:block text-sm text-[#7A7870] hover:text-[#1C1C19] transition-colors duration-150 font-medium"
-          >
-            Sign In
-          </a>
-          <a
-            href="#"
-            className="text-sm bg-[#F0C040] text-[#1C1C19] font-semibold px-4 py-2 rounded-lg hover:bg-[#E8B830] transition-colors duration-150 whitespace-nowrap"
-          >
-            Drifting In
-          </a>
+          <Show when="signed-out">
+            <SignInButton>
+              <button className="hidden sm:block text-sm text-[#7A7870] hover:text-[#1C1C19] transition-colors duration-150 font-medium">
+                Sign In
+              </button>
+            </SignInButton>
+            <SignUpButton>
+              <button className="text-sm bg-[#F0C040] text-[#1C1C19] font-semibold px-4 py-2 rounded-lg hover:bg-[#E8B830] transition-colors duration-150 whitespace-nowrap">
+                Drifting In
+              </button>
+            </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
         </div>
 
       </div>
