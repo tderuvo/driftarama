@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Show, UserButton, SignInButton } from '@clerk/nextjs'
+import { Show, UserButton, SignInButton, useUser } from '@clerk/nextjs'
 
 // ─── Shared: Drift Icon (wordmark glyph) ─────────────────────────────────────
 
@@ -525,9 +525,65 @@ function Footer() {
   )
 }
 
+// ─── App Nav (authenticated) ──────────────────────────────────────────────────
+
+function AppNav() {
+  return (
+    <header className="sticky top-0 z-50 bg-[#FAF8F3]/95 backdrop-blur-sm border-b border-[#EAE7DE]">
+      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+
+        <a href="/" aria-label="Home">
+          <DriftIcon className="text-[#2A2A27]" />
+        </a>
+
+        <div />
+
+        <div className="flex items-center gap-3">
+          <button
+            className="text-sm text-[#6B6860] border border-[#DDDAD2] px-4 py-1.5 rounded-lg hover:bg-[#F4F2EB] transition-colors duration-150"
+          >
+            Drifting In
+          </button>
+          <UserButton />
+        </div>
+
+      </div>
+    </header>
+  )
+}
+
+// ─── App View (authenticated main screen) ─────────────────────────────────────
+
+function AppView() {
+  const today = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date())
+
+  return (
+    <div className="min-h-screen bg-[#FAF8F3]">
+      <AppNav />
+      <main className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center pb-24">
+        <div className="w-full max-w-[600px] mx-auto px-6 text-center">
+          <p className="text-4xl md:text-5xl font-semibold tracking-tight text-[#2A2A27]">
+            {today}
+          </p>
+        </div>
+      </main>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const { isSignedIn, isLoaded } = useUser()
+
+  if (!isLoaded) return <div className="min-h-screen bg-[#FAF8F3]" />
+
+  if (isSignedIn) return <AppView />
+
   return (
     <main className="bg-[#FAF8F3] text-[#1C1C19]">
       <Navbar />
