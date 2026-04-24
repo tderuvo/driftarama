@@ -554,6 +554,52 @@ function AppNav() {
 
 // ─── App View (authenticated main screen) ─────────────────────────────────────
 
+// MOCK_DRIFTS_START
+type SubDrift = { text: string; highlight?: 'yellow' | 'green' | 'red' }
+type MockDrift = { title: string; subs: SubDrift[] }
+
+const mockDrifts: MockDrift[] = [
+  {
+    title: 'Do 2025 taxes',
+    subs: [
+      { text: 'Call accountant to confirm appointment', highlight: 'yellow' },
+      { text: 'Gather 1099s and bank statements' },
+      { text: 'Upload documents to accountant portal', highlight: 'green' },
+    ],
+  },
+  {
+    title: 'Replace hot water tank',
+    subs: [
+      { text: 'Find installation date and model number', highlight: 'yellow' },
+      { text: 'Ask HOA what documentation they need' },
+      { text: 'Contact plumber for replacement quote' },
+    ],
+  },
+  {
+    title: 'Comcast agreement signature',
+    subs: [
+      { text: 'Sent updated clause language to legal' },
+      { text: 'Waiting on response from Comcast', highlight: 'yellow' },
+      { text: 'Follow up with Davor if no reply by Friday', highlight: 'red' },
+    ],
+  },
+  {
+    title: 'Cancel unused subscriptions',
+    subs: [
+      { text: 'Review credit card statement' },
+      { text: 'Cancel duplicate cloud storage' },
+      { text: 'Note monthly savings' },
+    ],
+  },
+]
+
+const subHighlight: Record<'yellow' | 'green' | 'red', string> = {
+  yellow: 'bg-[#FEF3C7] px-1 -mx-1',
+  green:  'bg-[#D1FAE5] px-1 -mx-1',
+  red:    'bg-[#FEE2E2] px-1 -mx-1',
+}
+// MOCK_DRIFTS_END
+
 function AppView() {
   const today = new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
@@ -564,12 +610,46 @@ function AppView() {
   return (
     <div className="min-h-screen bg-[#FAF8F3]">
       <AppNav />
-      <main className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center pb-24">
-        <div className="w-full max-w-[600px] mx-auto px-6 text-center">
-          <p className="text-4xl md:text-5xl font-semibold tracking-tight text-[#2A2A27]">
-            {today}
-          </p>
+      <main className="max-w-180 mx-auto px-6 pt-12 pb-28">
+
+        {/* Date */}
+        <p className="text-4xl md:text-5xl font-semibold tracking-tight text-[#2A2A27] mb-10">
+          {today}
+        </p>
+
+        {/* MOCK_DRIFTS_START */}
+        <div className="space-y-5">
+          {mockDrifts.map((drift, i) => (
+            <div key={i}>
+              <div className="flex items-baseline gap-3 mb-2">
+                <span className="text-base text-[#3A3830] font-bold tabular-nums w-5 shrink-0 text-right select-none">
+                  {i + 1}
+                </span>
+                <span className="text-base text-[#1C1C19] font-semibold leading-snug">
+                  {drift.title}
+                </span>
+              </div>
+              <div className="space-y-1.5 pl-8">
+                {drift.subs.map((sub, j) => (
+                  <div key={j} className="flex items-baseline gap-2.5">
+                    <span className="text-[#C8C5BE] text-xs shrink-0 select-none">•</span>
+                    <span className={`text-sm text-[#8A8880] leading-relaxed${sub.highlight ? ' ' + subHighlight[sub.highlight] : ''}`}>
+                      {sub.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
+
+        <div className="mt-8 pl-8">
+          <button className="text-sm text-[#C0BCB4] hover:text-[#8A8880] transition-colors duration-150 cursor-default">
+            + Add drift
+          </button>
+        </div>
+        {/* MOCK_DRIFTS_END */}
+
       </main>
     </div>
   )
