@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Show, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs'
+import { Show, UserButton, SignInButton } from '@clerk/nextjs'
 
 // ─── Shared: Drift Icon (wordmark glyph) ─────────────────────────────────────
 
@@ -100,26 +100,22 @@ function Navbar() {
         <nav className="hidden md:flex items-center gap-7 text-sm text-[#7A7870]">
           <a href="#how-it-works" className="hover:text-[#1C1C19] transition-colors duration-150">How It Works</a>
           <a href="#why" className="hover:text-[#1C1C19] transition-colors duration-150">Why Driftarama</a>
-          <a href="#pricing" className="hover:text-[#1C1C19] transition-colors duration-150">Pricing</a>
-          <a href="#about" className="hover:text-[#1C1C19] transition-colors duration-150">About</a>
         </nav>
 
         <div className="flex items-center gap-3 shrink-0">
           <Show when="signed-out">
             <SignInButton>
-              <button className="hidden sm:block text-sm text-[#7A7870] hover:text-[#1C1C19] transition-colors duration-150 font-medium">
+              <button className="text-sm bg-[#F0C040] text-[#1C1C19] font-semibold px-4 py-2 rounded-lg hover:bg-[#E8B830] transition-colors duration-150 whitespace-nowrap">
                 Sign In
               </button>
             </SignInButton>
-            <SignUpButton>
-              <button className="text-sm bg-[#F0C040] text-[#1C1C19] font-semibold px-4 py-2 rounded-lg hover:bg-[#E8B830] transition-colors duration-150 whitespace-nowrap">
-                Drifting In
-              </button>
-            </SignUpButton>
           </Show>
           <Show when="signed-in">
             <UserButton />
           </Show>
+          <button className="hidden sm:block text-sm text-[#7A7870] hover:text-[#1C1C19] transition-colors duration-150 font-medium cursor-default">
+            Drifting In
+          </button>
         </div>
 
       </div>
