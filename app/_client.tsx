@@ -605,6 +605,8 @@ function AppView() {
   }).format(new Date())
 
   const [drifts, setDrifts] = useState<DriftData[]>([])
+  const [isAdding, setIsAdding] = useState(false)
+  const [inputValue, setInputValue] = useState('')
 
   useEffect(() => {
     fetch('/api/drifts')
@@ -612,6 +614,39 @@ function AppView() {
       .then(data => setDrifts(data.drifts ?? []))
       .catch(() => {})
   }, [])
+
+  const cancelAdd = () => {
+    setIsAdding(false)
+    setInputValue('')
+  }
+
+  const submitDrift = async (title: string) => {
+    try {
+      const res = await fetch('/api/drifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+      if (!res.ok) throw new Error('POST /api/drifts failed')
+      const data = await res.json()
+      setDrifts(prev => [...prev, { ...data.drift, children: [] }])
+    } catch (err) {
+      console.error('Failed to create drift:', err)
+    } finally {
+      cancelAdd()
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') { cancelAdd(); return }
+    if (e.key === 'Enter') {
+      const trimmed = inputValue.trim()
+      if (trimmed) submitDrift(trimmed)
+      else cancelAdd()
+    }
+  }
+
+  const handleBlur = () => cancelAdd()
 
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
@@ -626,13 +661,31 @@ function AppView() {
         </p>
 
         {/* Add drift entry point */}
-        <div className="no-print pl-8 mb-7">
-          <button
-            onClick={() => console.log('Add drift clicked')}
-            className="text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
-          >
-            + Add a drift…
-          </button>
+        <div className="no-print mb-7">
+          {isAdding ? (
+            <div className="flex items-baseline gap-3">
+              <span className="text-base text-[#C8C5BE] font-bold tabular-nums w-5 shrink-0 text-right select-none">
+                {drifts.length + 1}
+              </span>
+              <input
+                autoFocus
+                type="text"
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                placeholder="Type something to handle…"
+                className="flex-1 text-base text-[#1C1C19] font-semibold leading-normal bg-transparent border-b border-[#D8D5CC] outline-none placeholder:text-[#C8C5BE] placeholder:font-normal"
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="pl-8 text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
+            >
+              + Add a drift…
+            </button>
+          )}
         </div>
 
         <div className="space-y-5">
