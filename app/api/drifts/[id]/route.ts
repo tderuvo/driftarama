@@ -1,0 +1,49 @@
+import { auth } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { userId: clerkUserId } = await auth()
+  if (!clerkUserId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id } = await params
+
+  const user = await prisma.user.findUnique({ where: { clerkUserId } })
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  // Verify drift belongs to this user
+  const existing = await prisma.drift.findFirst({
+    where: { id, userId: user.id, deletedAt: null },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: 'Drift not found' }, { status: 404 })
+  }
+
+  const payload = await request.json()
+  const updates: { title?: string; body?: string | null } = {}
+
+  if (typeof payload.title === 'string' && payload.title.trim()) {
+    updates.title = payload.title.trim()
+  }
+  if (typeof payload.body === 'string') {
+    updates.body = payload.body || null
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ drift: existing })
+  }
+
+  const updated = await prisma.drift.update({
+    where: { id },
+    data: updates,
+  })
+
+  return NextResponse.json({ drift: updated })
+}
