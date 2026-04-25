@@ -621,9 +621,19 @@ function AppView() {
         <div className="print-area">
 
         {/* Date */}
-        <p className="text-4xl md:text-5xl font-semibold tracking-tight text-[#2A2A27] mb-10">
+        <p className="text-4xl md:text-5xl font-semibold tracking-tight text-[#2A2A27] mb-6">
           {today}
         </p>
+
+        {/* Add drift entry point */}
+        <div className="no-print pl-8 mb-7">
+          <button
+            onClick={() => console.log('Add drift clicked')}
+            className="text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
+          >
+            + Add a drift…
+          </button>
+        </div>
 
         <div className="space-y-5">
           {drifts.map((drift, i) => (
@@ -651,12 +661,6 @@ function AppView() {
         </div>
 
         </div> {/* /print-area */}
-
-        <div className="no-print mt-8 pl-8">
-          <button className="text-sm text-[#C0BCB4] hover:text-[#8A8880] transition-colors duration-150 cursor-default">
-            + Add drift
-          </button>
-        </div>
 
       </main>
     </div>
