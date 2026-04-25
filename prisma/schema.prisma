@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Highlight {
+  none
+  yellow
+  green
+  red
+}
+
+enum DriftRole {
+  system
+  normal
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String?
+  role        String   @default("user")
+  plan        String   @default("free")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  drifts Drift[]
+}
+
+model Drift {
+  id            String    @id @default(cuid())
+  userId        String
+  parentId      String?
+  title         String
+  body          String?
+  description   String?
+  highlight     Highlight @default(none)
+  driftRole     DriftRole @default(normal)
+  sortOrder     Int       @default(0)
+  sourceDriftId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  user     User    @relation(fields: [userId], references: [id])
+  parent   Drift?  @relation("DriftChildren", fields: [parentId], references: [id])
+  children Drift[] @relation("DriftChildren")
+}
