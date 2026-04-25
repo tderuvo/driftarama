@@ -588,6 +588,8 @@ type SubDriftData = {
 type DriftData = {
   id: string
   title: string
+  body: string | null
+  description: string | null
   children: SubDriftData[]
 }
 
@@ -605,6 +607,7 @@ function AppView() {
   }).format(new Date())
 
   const [drifts, setDrifts] = useState<DriftData[]>([])
+  const [selectedDrift, setSelectedDrift] = useState<DriftData | null>(null)
   const [isAdding, setIsAdding] = useState(false)
   const [inputValue, setInputValue] = useState('')
 
@@ -690,12 +693,12 @@ function AppView() {
 
         <div className="space-y-5">
           {drifts.map((drift, i) => (
-            <div key={drift.id}>
+            <div key={drift.id} onClick={() => setSelectedDrift(drift)} className="cursor-pointer group">
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-base text-[#3A3830] font-bold tabular-nums w-5 shrink-0 text-right select-none">
+                <span className={`text-base font-bold tabular-nums w-5 shrink-0 text-right select-none transition-colors duration-100 ${selectedDrift?.id === drift.id ? 'text-[#5A5850]' : 'text-[#3A3830]'}`}>
                   {i + 1}
                 </span>
-                <span className="text-base text-[#1C1C19] font-semibold leading-normal">
+                <span className={`text-base font-semibold leading-normal transition-colors duration-100 ${selectedDrift?.id === drift.id ? 'text-[#2A2A27]' : 'text-[#1C1C19] group-hover:text-[#2A2A27]'}`}>
                   {drift.title}
                 </span>
               </div>
@@ -716,6 +719,51 @@ function AppView() {
         </div> {/* /print-area */}
 
       </main>
+
+      {/* ── Detail pane ── */}
+      {selectedDrift && (
+        <aside className="no-print fixed top-14 right-0 bottom-0 w-80 bg-[#FAF9F4] border-l border-[#EAE7DE] z-40 overflow-y-auto">
+          <div className="pt-10 px-7 pb-16">
+
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 mb-7">
+              <h2 className="text-[1.05rem] font-semibold text-[#1C1C19] leading-snug">
+                {selectedDrift.title}
+              </h2>
+              <button
+                onClick={() => setSelectedDrift(null)}
+                aria-label="Close"
+                className="text-[#B0ADA6] hover:text-[#5A5850] transition-colors duration-150 text-xl leading-none mt-0.5 shrink-0"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Description box */}
+            {selectedDrift.description && (
+              <div className="bg-[#F0EDE4] rounded-xl px-4 py-3 mb-5">
+                <p className="text-sm text-[#6B6860] leading-relaxed">
+                  {selectedDrift.description}
+                </p>
+              </div>
+            )}
+
+            {/* Body */}
+            {selectedDrift.body && (
+              <p className="text-sm text-[#5A5850] leading-relaxed">
+                {selectedDrift.body}
+              </p>
+            )}
+
+            {/* Empty state */}
+            {!selectedDrift.description && !selectedDrift.body && (
+              <p className="text-sm text-[#C0BCB4] italic">No notes yet.</p>
+            )}
+
+          </div>
+        </aside>
+      )}
+
     </div>
   )
 }
