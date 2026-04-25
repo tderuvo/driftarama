@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Show, UserButton, SignInButton, useUser } from '@clerk/nextjs'
 
@@ -577,51 +577,25 @@ function AppNav() {
 
 // ─── App View (authenticated main screen) ─────────────────────────────────────
 
-// MOCK_DRIFTS_START
-type SubDrift = { text: string; highlight?: 'yellow' | 'green' | 'red' }
-type MockDrift = { title: string; subs: SubDrift[] }
+// ─── Drift Types ──────────────────────────────────────────────────────────────
 
-const mockDrifts: MockDrift[] = [
-  {
-    title: 'Do 2025 taxes',
-    subs: [
-      { text: 'Call accountant to confirm appointment', highlight: 'yellow' },
-      { text: 'Gather 1099s and bank statements' },
-      { text: 'Upload documents to accountant portal', highlight: 'green' },
-    ],
-  },
-  {
-    title: 'Replace hot water tank',
-    subs: [
-      { text: 'Find installation date and model number', highlight: 'yellow' },
-      { text: 'Ask HOA what documentation they need' },
-      { text: 'Contact plumber for replacement quote' },
-    ],
-  },
-  {
-    title: 'Comcast agreement signature',
-    subs: [
-      { text: 'Sent updated clause language to legal' },
-      { text: 'Waiting on response from Comcast', highlight: 'yellow' },
-      { text: 'Follow up with Davor if no reply by Friday', highlight: 'red' },
-    ],
-  },
-  {
-    title: 'Cancel unused subscriptions',
-    subs: [
-      { text: 'Review credit card statement' },
-      { text: 'Cancel duplicate cloud storage' },
-      { text: 'Note monthly savings' },
-    ],
-  },
-]
+type SubDriftData = {
+  id: string
+  title: string
+  highlight: string
+}
 
-const subHighlight: Record<'yellow' | 'green' | 'red', string> = {
+type DriftData = {
+  id: string
+  title: string
+  children: SubDriftData[]
+}
+
+const subHighlight: Record<string, string> = {
   yellow: 'bg-[#FEF0A8] px-[5px] -mx-[5px]',
   green:  'bg-[#C6F0D8] px-[5px] -mx-[5px]',
   red:    'bg-[#FBCFCF] px-[5px] -mx-[5px]',
 }
-// MOCK_DRIFTS_END
 
 function AppView() {
   const today = new Intl.DateTimeFormat('en-US', {
@@ -629,6 +603,15 @@ function AppView() {
     month: 'long',
     day: 'numeric',
   }).format(new Date())
+
+  const [drifts, setDrifts] = useState<DriftData[]>([])
+
+  useEffect(() => {
+    fetch('/api/drifts')
+      .then(res => res.json())
+      .then(data => setDrifts(data.drifts ?? []))
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
@@ -642,10 +625,9 @@ function AppView() {
           {today}
         </p>
 
-        {/* MOCK_DRIFTS_START */}
         <div className="space-y-5">
-          {mockDrifts.map((drift, i) => (
-            <div key={i}>
+          {drifts.map((drift, i) => (
+            <div key={drift.id}>
               <div className="flex items-baseline gap-3 mb-2">
                 <span className="text-base text-[#3A3830] font-bold tabular-nums w-5 shrink-0 text-right select-none">
                   {i + 1}
@@ -655,11 +637,11 @@ function AppView() {
                 </span>
               </div>
               <div className="space-y-1.5 pl-8">
-                {drift.subs.map((sub, j) => (
-                  <div key={j} className="flex items-baseline gap-2.5">
+                {drift.children.map((sub) => (
+                  <div key={sub.id} className="flex items-baseline gap-2.5">
                     <span className="text-[#C8C5BE] text-xs shrink-0 select-none">•</span>
-                    <span className={`text-sm text-[#8A8880] leading-relaxed${sub.highlight ? ' ' + subHighlight[sub.highlight] : ''}`}>
-                      {sub.text}
+                    <span className={`text-sm text-[#8A8880] leading-relaxed${sub.highlight !== 'none' ? ' ' + (subHighlight[sub.highlight] ?? '') : ''}`}>
+                      {sub.title}
                     </span>
                   </div>
                 ))}
@@ -675,7 +657,6 @@ function AppView() {
             + Add drift
           </button>
         </div>
-        {/* MOCK_DRIFTS_END */}
 
       </main>
     </div>
