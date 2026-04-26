@@ -612,6 +612,8 @@ function AppView() {
   const [editBody, setEditBody] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [inputValue, setInputValue] = useState('')
+  const [isAddingSub, setIsAddingSub] = useState(false)
+  const [subInputValue, setSubInputValue] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -689,6 +691,46 @@ function AppView() {
   }
 
   const handleBlur = () => cancelAdd()
+
+  const cancelSub = () => { setIsAddingSub(false); setSubInputValue('') }
+
+  const submitSubDrift = async (title: string) => {
+    if (!selectedDrift) return
+    try {
+      const res = await fetch('/api/drifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, parentId: selectedDrift.id }),
+      })
+      if (!res.ok) throw new Error('POST sub-drift failed')
+      const data = await res.json()
+      const newSub: SubDriftData = {
+        id:        data.drift.id,
+        title:     data.drift.title,
+        highlight: data.drift.highlight,
+      }
+      setDrifts(prev => prev.map(d =>
+        d.id === selectedDrift.id
+          ? { ...d, children: [...d.children, newSub] }
+          : d
+      ))
+    } catch (err) {
+      console.error('Failed to create sub-drift:', err)
+    } finally {
+      cancelSub()
+    }
+  }
+
+  const handleSubKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') { cancelSub(); return }
+    if (e.key === 'Enter') {
+      const trimmed = subInputValue.trim()
+      if (trimmed) submitSubDrift(trimmed)
+      else cancelSub()
+    }
+  }
+
+  const handleSubBlur = () => cancelSub()
 
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
@@ -806,6 +848,29 @@ function AppView() {
               rows={10}
               className="w-full resize-none text-sm text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
             />
+
+            {/* Sub-drift entry */}
+            <div className="mt-8 pt-5 border-t border-[#EAE7DE]">
+              {isAddingSub ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={subInputValue}
+                  onChange={e => setSubInputValue(e.target.value)}
+                  onKeyDown={handleSubKeyDown}
+                  onBlur={handleSubBlur}
+                  placeholder="Type a next step…"
+                  className="w-full text-sm text-[#5A5850] bg-transparent border-b border-[#D8D5CC] outline-none placeholder:text-[#C8C5BE]"
+                />
+              ) : (
+                <button
+                  onClick={() => setIsAddingSub(true)}
+                  className="text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
+                >
+                  + Add sub-drift…
+                </button>
+              )}
+            </div>
 
           </div>
         </aside>

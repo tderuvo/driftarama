@@ -58,7 +58,9 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const title = typeof body.title === 'string' ? body.title.trim() : ''
+  const title    = typeof body.title    === 'string' ? body.title.trim()    : ''
+  const parentId = typeof body.parentId === 'string' ? body.parentId.trim() : null
+
   if (!title) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
   }
@@ -68,20 +70,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
-  const openDrift = await prisma.drift.findFirst({
-    where: {
-      userId:    user.id,
-      driftRole: 'system',
-      title:     'Open',
-      deletedAt: null,
-    },
-  })
-  if (!openDrift) {
-    return NextResponse.json({ error: 'Open drift not found' }, { status: 404 })
+  // Determine the parent: explicit parentId (sub-drift) or the Open system drift (top-level)
+  let resolvedParentId: string
+
+  if (parentId) {
+    const parent = await prisma.drift.findFirst({
+      where: { id: parentId, userId: user.id, deletedAt: null },
+    })
+    if (!parent) {
+      return NextResponse.json({ error: 'Parent drift not found' }, { status: 404 })
+    }
+    resolvedParentId = parentId
+  } else {
+    const openDrift = await prisma.drift.findFirst({
+      where: { userId: user.id, driftRole: 'system', title: 'Open', deletedAt: null },
+    })
+    if (!openDrift) {
+      return NextResponse.json({ error: 'Open drift not found' }, { status: 404 })
+    }
+    resolvedParentId = openDrift.id
   }
 
   const maxOrder = await prisma.drift.aggregate({
-    where: { userId: user.id, parentId: openDrift.id, deletedAt: null },
+    where: { userId: user.id, parentId: resolvedParentId, deletedAt: null },
     _max: { sortOrder: true },
   })
   const sortOrder = (maxOrder._max.sortOrder ?? -1) + 1
@@ -89,7 +100,7 @@ export async function POST(request: Request) {
   const drift = await prisma.drift.create({
     data: {
       userId:    user.id,
-      parentId:  openDrift.id,
+      parentId:  resolvedParentId,
       title,
       driftRole: 'normal',
       highlight: 'none',
