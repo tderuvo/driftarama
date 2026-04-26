@@ -66,3 +66,44 @@ export async function PATCH(
 
   return NextResponse.json({ drift: updated })
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { userId: clerkUserId } = await auth()
+  if (!clerkUserId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id } = await params
+
+  const user = await prisma.user.findUnique({ where: { clerkUserId } })
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  const existing = await prisma.drift.findFirst({
+    where: { id, userId: user.id, deletedAt: null },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: 'Drift not found' }, { status: 404 })
+  }
+  if (existing.driftRole === 'system') {
+    return NextResponse.json({ error: 'Cannot delete system drifts' }, { status: 400 })
+  }
+
+  const now = new Date()
+
+  // Soft delete parent + all direct children (covers full depth used in the app)
+  await prisma.drift.update({
+    where: { id },
+    data: { deletedAt: now },
+  })
+  await prisma.drift.updateMany({
+    where: { parentId: id, deletedAt: null },
+    data: { deletedAt: now },
+  })
+
+  return NextResponse.json({ ok: true })
+}

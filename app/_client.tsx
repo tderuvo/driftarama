@@ -992,6 +992,33 @@ function AppView() {
                 {label}
               </button>
             ))}
+
+            {/* Delete — always visible, parent or sub */}
+            <div className="my-1 mx-3 border-t border-[#EAE7DE]" />
+            <button
+              onClick={() => {
+                const { driftId, parentId } = contextMenu
+                const ok = window.confirm('Delete this drift? You can restore deleted drifts later.')
+                if (!ok) { setContextMenu(null); return }
+                setContextMenu(null)
+                // Optimistic update
+                if (parentId === null) {
+                  if (selectedDrift?.id === driftId) setSelectedDrift(null)
+                  setDrifts(prev => prev.filter(d => d.id !== driftId))
+                } else {
+                  setDrifts(prev => prev.map(d =>
+                    d.id === parentId
+                      ? { ...d, children: d.children.filter(c => c.id !== driftId) }
+                      : d
+                  ))
+                }
+                fetch(`/api/drifts/${driftId}`, { method: 'DELETE' })
+                  .catch(err => console.error('Failed to delete drift:', err))
+              }}
+              className="w-full text-left text-sm text-[#E87070] px-4 py-1.5 hover:bg-[#FFF5F5] transition-colors duration-100"
+            >
+              Delete
+            </button>
           </div>
         </>
       )}
