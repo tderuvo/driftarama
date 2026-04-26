@@ -15,6 +15,7 @@ enum Highlight {
   yellow
   green
   red
+  mute
 }
 
 enum DriftRole {

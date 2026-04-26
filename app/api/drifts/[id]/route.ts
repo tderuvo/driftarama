@@ -1,6 +1,9 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import { Highlight } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+
+const VALID_HIGHLIGHTS = Object.values(Highlight)
 
 export async function PATCH(
   request: Request,
@@ -27,13 +30,16 @@ export async function PATCH(
   }
 
   const payload = await request.json()
-  const updates: { title?: string; body?: string | null } = {}
+  const updates: { title?: string; body?: string | null; highlight?: Highlight } = {}
 
   if (typeof payload.title === 'string' && payload.title.trim()) {
     updates.title = payload.title.trim()
   }
   if (typeof payload.body === 'string') {
     updates.body = payload.body || null
+  }
+  if (typeof payload.highlight === 'string' && VALID_HIGHLIGHTS.includes(payload.highlight as Highlight)) {
+    updates.highlight = payload.highlight as Highlight
   }
 
   if (Object.keys(updates).length === 0) {

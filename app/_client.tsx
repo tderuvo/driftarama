@@ -590,13 +590,23 @@ type DriftData = {
   title: string
   body: string | null
   description: string | null
+  highlight: string
   children: SubDriftData[]
 }
 
-const subHighlight: Record<string, string> = {
-  yellow: 'bg-[#FEF0A8] px-[5px] -mx-[5px]',
-  green:  'bg-[#C6F0D8] px-[5px] -mx-[5px]',
-  red:    'bg-[#FBCFCF] px-[5px] -mx-[5px]',
+// Marker highlight styles — flat background, no borders, sits behind text
+const highlightClass: Record<string, string> = {
+  yellow: 'bg-[#F5E6A8] px-[5px] -mx-[5px]',
+  green:  'bg-[#CDE8D5] px-[5px] -mx-[5px]',
+  red:    'bg-[#F2C6C6] px-[5px] -mx-[5px]',
+  mute:   'opacity-40',
+}
+
+type ContextMenuState = {
+  driftId:  string
+  parentId: string | null   // null = top-level drift
+  x: number
+  y: number
 }
 
 function AppView() {
@@ -614,6 +624,7 @@ function AppView() {
   const [inputValue, setInputValue] = useState('')
   const [isAddingSub, setIsAddingSub] = useState(false)
   const [subInputValue, setSubInputValue] = useState('')
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -732,6 +743,45 @@ function AppView() {
 
   const handleSubBlur = () => cancelSub()
 
+  // Close context menu on any outside click
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [contextMenu])
+
+  const openContextMenu = (e: React.MouseEvent, driftId: string, parentId: string | null) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ driftId, parentId, x: e.clientX, y: e.clientY })
+  }
+
+  const applyHighlight = async (highlight: string) => {
+    if (!contextMenu) return
+    const { driftId, parentId } = contextMenu
+    setContextMenu(null)
+
+    // Optimistic update
+    setDrifts(prev => prev.map(d => {
+      if (parentId === null) {
+        return d.id === driftId ? { ...d, highlight } : d
+      }
+      if (d.id !== parentId) return d
+      return { ...d, children: d.children.map(c => c.id === driftId ? { ...c, highlight } : c) }
+    }))
+
+    try {
+      await fetch(`/api/drifts/${driftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ highlight }),
+      })
+    } catch (err) {
+      console.error('Failed to update highlight:', err)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
       <AppNav />
@@ -774,20 +824,29 @@ function AppView() {
 
         <div className="space-y-5">
           {drifts.map((drift, i) => (
-            <div key={drift.id} onClick={() => setSelectedDrift(drift)} className="cursor-pointer group">
+            <div
+              key={drift.id}
+              onClick={() => setSelectedDrift(drift)}
+              onContextMenu={e => openContextMenu(e, drift.id, null)}
+              className="cursor-pointer group"
+            >
               <div className="flex items-baseline gap-3 mb-2">
                 <span className={`text-base font-bold tabular-nums w-5 shrink-0 text-right select-none transition-colors duration-100 ${selectedDrift?.id === drift.id ? 'text-[#5A5850]' : 'text-[#3A3830]'}`}>
                   {i + 1}
                 </span>
-                <span className={`text-base font-semibold leading-normal transition-colors duration-100 ${selectedDrift?.id === drift.id ? 'text-[#2A2A27]' : 'text-[#1C1C19] group-hover:text-[#2A2A27]'}`}>
+                <span className={`text-base font-semibold leading-normal transition-colors duration-100 ${selectedDrift?.id === drift.id ? 'text-[#2A2A27]' : 'text-[#1C1C19] group-hover:text-[#2A2A27]'}${drift.highlight !== 'none' ? ' ' + (highlightClass[drift.highlight] ?? '') : ''}`}>
                   {drift.title}
                 </span>
               </div>
               <div className="space-y-1.5 pl-8">
                 {drift.children.map((sub) => (
-                  <div key={sub.id} className="flex items-baseline gap-2.5">
+                  <div
+                    key={sub.id}
+                    onContextMenu={e => openContextMenu(e, sub.id, drift.id)}
+                    className="flex items-baseline gap-2.5"
+                  >
                     <span className="text-[#C8C5BE] text-xs shrink-0 select-none">•</span>
-                    <span className={`text-sm text-[#8A8880] leading-relaxed${sub.highlight !== 'none' ? ' ' + (subHighlight[sub.highlight] ?? '') : ''}`}>
+                    <span className={`text-sm text-[#8A8880] leading-relaxed${sub.highlight !== 'none' ? ' ' + (highlightClass[sub.highlight] ?? '') : ''}`}>
                       {sub.title}
                     </span>
                   </div>
@@ -874,6 +933,31 @@ function AppView() {
 
           </div>
         </aside>
+      )}
+
+      {/* ── Context menu ── */}
+      {contextMenu && (
+        <div
+          className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-[110px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          {([
+            { label: 'Yellow', value: 'yellow' },
+            { label: 'Green',  value: 'green'  },
+            { label: 'Red',    value: 'red'    },
+            { label: 'Clear',  value: 'none'   },
+            { label: 'Mute',   value: 'mute'   },
+          ] as const).map(({ label, value }) => (
+            <button
+              key={value}
+              onClick={() => applyHighlight(value)}
+              className="w-full text-left text-sm text-[#3A3830] px-4 py-1.5 hover:bg-[#F0EDE4] transition-colors duration-100"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       )}
 
     </div>
