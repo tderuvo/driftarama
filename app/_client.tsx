@@ -754,7 +754,6 @@ function AppView() {
     const { driftId, parentId } = contextMenu
     setContextMenu(null)
 
-    // Optimistic update
     setDrifts(prev => prev.map(d => {
       if (parentId === null) {
         return d.id === driftId ? { ...d, highlight } : d
