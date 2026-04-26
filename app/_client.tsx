@@ -954,24 +954,25 @@ function AppView() {
             className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-[120px]"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
-            {/* Move to Done — parent drifts in Open view only */}
-            {contextMenu.parentId === null && activeView === 'open' && (
+            {/* Move to Done / Move to Open — parent drifts only, adapts to view */}
+            {contextMenu.parentId === null && (
               <>
                 <button
                   onClick={() => {
                     const { driftId } = contextMenu
+                    const target = activeView === 'open' ? 'done' : 'open'
                     setContextMenu(null)
                     if (selectedDrift?.id === driftId) setSelectedDrift(null)
                     setDrifts(prev => prev.filter(d => d.id !== driftId))
                     fetch(`/api/drifts/${driftId}`, {
                       method: 'PATCH',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ moveTo: 'done' }),
-                    }).catch(err => console.error('Failed to move to Done:', err))
+                      body: JSON.stringify({ moveTo: target }),
+                    }).catch(err => console.error(`Failed to move to ${target}:`, err))
                   }}
                   className="w-full text-left text-sm text-[#3A3830] px-4 py-1.5 hover:bg-[#F0EDE4] transition-colors duration-100"
                 >
-                  Move to Done
+                  {activeView === 'open' ? 'Move to Done' : 'Move to Open'}
                 </button>
                 <div className="my-1 mx-3 border-t border-[#EAE7DE]" />
               </>
