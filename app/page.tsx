@@ -11,7 +11,12 @@ export default async function Page() {
   const { userId } = await auth()
 
   if (userId) {
-    await initUser(userId)
+    try {
+      await initUser(userId)
+    } catch (error) {
+      console.error('DRIFTARAMA_INIT_USER_ERROR', error)
+      throw error
+    }
   }
 
   return <ClientPage />
