@@ -743,14 +743,6 @@ function AppView() {
 
   const handleSubBlur = () => cancelSub()
 
-  // Close context menu on any outside click
-  useEffect(() => {
-    if (!contextMenu) return
-    const close = () => setContextMenu(null)
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [contextMenu])
-
   const openContextMenu = (e: React.MouseEvent, driftId: string, parentId: string | null) => {
     e.preventDefault()
     e.stopPropagation()
@@ -937,27 +929,33 @@ function AppView() {
 
       {/* ── Context menu ── */}
       {contextMenu && (
-        <div
-          className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-[110px]"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onMouseDown={e => e.stopPropagation()}
-        >
-          {([
-            { label: 'Yellow', value: 'yellow' },
-            { label: 'Green',  value: 'green'  },
-            { label: 'Red',    value: 'red'    },
-            { label: 'Clear',  value: 'none'   },
-            { label: 'Mute',   value: 'mute'   },
-          ] as const).map(({ label, value }) => (
-            <button
-              key={value}
-              onClick={() => applyHighlight(value)}
-              className="w-full text-left text-sm text-[#3A3830] px-4 py-1.5 hover:bg-[#F0EDE4] transition-colors duration-100"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <>
+          {/* Invisible overlay — clicking outside closes the menu */}
+          <div
+            className="no-print fixed inset-0 z-40"
+            onClick={() => setContextMenu(null)}
+          />
+          <div
+            className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-[110px]"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            {([
+              { label: 'Yellow', value: 'yellow' },
+              { label: 'Green',  value: 'green'  },
+              { label: 'Red',    value: 'red'    },
+              { label: 'Clear',  value: 'none'   },
+              { label: 'Mute',   value: 'mute'   },
+            ] as const).map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => applyHighlight(value)}
+                className="w-full text-left text-sm text-[#3A3830] px-4 py-1.5 hover:bg-[#F0EDE4] transition-colors duration-100"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
     </div>
