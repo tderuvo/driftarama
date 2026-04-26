@@ -527,7 +527,10 @@ function Footer() {
 
 // ─── App Nav (authenticated) ──────────────────────────────────────────────────
 
-function AppNav() {
+function AppNav({ activeView, onViewChange }: {
+  activeView: 'open' | 'done'
+  onViewChange: (v: 'open' | 'done') => void
+}) {
   return (
     <header className="no-print sticky top-0 z-50 bg-[#FAF8F3]/95 backdrop-blur-sm border-b border-[#EAE7DE]">
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
@@ -537,10 +540,16 @@ function AppNav() {
             <DriftIcon className="text-[#2A2A27]" />
           </a>
           <div className="flex items-center gap-1">
-            <button className="text-sm font-medium text-[#2A2A27] bg-[#EEEAE0] px-3 py-1 rounded-md">
+            <button
+              onClick={() => onViewChange('open')}
+              className={`text-sm font-medium px-3 py-1 rounded-md transition-colors duration-150 ${activeView === 'open' ? 'text-[#2A2A27] bg-[#EEEAE0]' : 'text-[#A8A49C] hover:bg-[#F0EDE4] hover:text-[#6B6860]'}`}
+            >
               Open
             </button>
-            <button className="text-sm font-medium text-[#A8A49C] px-3 py-1 rounded-md hover:bg-[#F0EDE4] hover:text-[#6B6860] transition-colors duration-150">
+            <button
+              onClick={() => onViewChange('done')}
+              className={`text-sm font-medium px-3 py-1 rounded-md transition-colors duration-150 ${activeView === 'done' ? 'text-[#2A2A27] bg-[#EEEAE0]' : 'text-[#A8A49C] hover:bg-[#F0EDE4] hover:text-[#6B6860]'}`}
+            >
               Done
             </button>
           </div>
@@ -616,23 +625,31 @@ function AppView() {
     day: 'numeric',
   }).format(new Date())
 
-  const [drifts, setDrifts] = useState<DriftData[]>([])
+  const [activeView, setActiveView]   = useState<'open' | 'done'>('open')
+  const [drifts, setDrifts]           = useState<DriftData[]>([])
   const [selectedDrift, setSelectedDrift] = useState<DriftData | null>(null)
-  const [editTitle, setEditTitle] = useState('')
-  const [editBody, setEditBody] = useState('')
-  const [isAdding, setIsAdding] = useState(false)
-  const [inputValue, setInputValue] = useState('')
+  const [editTitle, setEditTitle]     = useState('')
+  const [editBody, setEditBody]       = useState('')
+  const [isAdding, setIsAdding]       = useState(false)
+  const [inputValue, setInputValue]   = useState('')
   const [isAddingSub, setIsAddingSub] = useState(false)
   const [subInputValue, setSubInputValue] = useState('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const switchView = (v: 'open' | 'done') => {
+    setActiveView(v)
+    setSelectedDrift(null)
+    setIsAdding(false)
+    setInputValue('')
+  }
+
   useEffect(() => {
-    fetch('/api/drifts')
+    fetch(`/api/drifts?view=${activeView}`)
       .then(res => res.json())
       .then(data => setDrifts(data.drifts ?? []))
       .catch(() => {})
-  }, [])
+  }, [activeView])
 
   // Sync edit fields when a different drift is selected
   useEffect(() => {
@@ -775,7 +792,7 @@ function AppView() {
 
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
-      <AppNav />
+      <AppNav activeView={activeView} onViewChange={switchView} />
       <main className="max-w-180 mx-auto px-6 md:px-10 pt-12 pb-28 bg-[#FAF9F4] min-h-[calc(100vh-3.5rem)] shadow-[0_1px_16px_rgba(40,36,28,0.07),0_0_0_1px_rgba(40,36,28,0.04)] print:bg-white print:shadow-none print:max-w-none print:px-10 print:pt-8">
 
         <div className="print-area">
@@ -785,8 +802,8 @@ function AppView() {
           {today}
         </p>
 
-        {/* Add drift entry point */}
-        <div className="no-print mb-7">
+        {/* Add drift entry point — Open view only */}
+        <div className={`no-print mb-7${activeView === 'done' ? ' hidden' : ''}`}>
           {isAdding ? (
             <div className="flex items-baseline gap-3">
               <span className="text-base text-[#C8C5BE] font-bold tabular-nums w-5 shrink-0 text-right select-none">
@@ -929,15 +946,36 @@ function AppView() {
       {/* ── Context menu ── */}
       {contextMenu && (
         <>
-          {/* Invisible overlay — clicking outside closes the menu */}
           <div
             className="no-print fixed inset-0 z-40"
             onClick={() => setContextMenu(null)}
           />
           <div
-            className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-[110px]"
+            className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-[120px]"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
+            {/* Move to Done — parent drifts in Open view only */}
+            {contextMenu.parentId === null && activeView === 'open' && (
+              <>
+                <button
+                  onClick={() => {
+                    const { driftId } = contextMenu
+                    setContextMenu(null)
+                    if (selectedDrift?.id === driftId) setSelectedDrift(null)
+                    setDrifts(prev => prev.filter(d => d.id !== driftId))
+                    fetch(`/api/drifts/${driftId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ moveTo: 'done' }),
+                    }).catch(err => console.error('Failed to move to Done:', err))
+                  }}
+                  className="w-full text-left text-sm text-[#3A3830] px-4 py-1.5 hover:bg-[#F0EDE4] transition-colors duration-100"
+                >
+                  Move to Done
+                </button>
+                <div className="my-1 mx-3 border-t border-[#EAE7DE]" />
+              </>
+            )}
             {([
               { label: 'Yellow', value: 'yellow' },
               { label: 'Green',  value: 'green'  },

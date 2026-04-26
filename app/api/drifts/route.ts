@@ -2,12 +2,15 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request: Request) {
   const { userId: clerkUserId } = await auth()
 
   if (!clerkUserId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const view = new URL(request.url).searchParams.get('view')
+  const systemTitle = view === 'done' ? 'Done' : 'Open'
 
   const user = await prisma.user.findUnique({ where: { clerkUserId } })
   if (!user) {
@@ -18,7 +21,7 @@ export async function GET() {
     where: {
       userId:    user.id,
       driftRole: 'system',
-      title:     'Open',
+      title:     systemTitle,
       deletedAt: null,
     },
   })

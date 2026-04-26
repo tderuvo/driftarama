@@ -30,7 +30,7 @@ export async function PATCH(
   }
 
   const payload = await request.json()
-  const updates: { title?: string; body?: string | null; highlight?: Highlight } = {}
+  const updates: { title?: string; body?: string | null; highlight?: Highlight; parentId?: string } = {}
 
   if (typeof payload.title === 'string' && payload.title.trim()) {
     updates.title = payload.title.trim()
@@ -40,6 +40,19 @@ export async function PATCH(
   }
   if (typeof payload.highlight === 'string' && VALID_HIGHLIGHTS.includes(payload.highlight as Highlight)) {
     updates.highlight = payload.highlight as Highlight
+  }
+  if (payload.moveTo === 'done' || payload.moveTo === 'open') {
+    if (existing.driftRole === 'system') {
+      return NextResponse.json({ error: 'Cannot move system drifts' }, { status: 400 })
+    }
+    const targetTitle = payload.moveTo === 'done' ? 'Done' : 'Open'
+    const target = await prisma.drift.findFirst({
+      where: { userId: user.id, driftRole: 'system', title: targetTitle, deletedAt: null },
+    })
+    if (!target) {
+      return NextResponse.json({ error: `${targetTitle} system drift not found` }, { status: 404 })
+    }
+    updates.parentId = target.id
   }
 
   if (Object.keys(updates).length === 0) {
