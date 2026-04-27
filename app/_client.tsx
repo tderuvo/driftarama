@@ -589,6 +589,7 @@ function AppNav({ activeView, onViewChange }: {
 type FocusViewProps = {
   drift: SubDriftData
   parentTitle?: string
+  siblingDrifts: SubDriftData[]
   editTitle: string
   setEditTitle: (t: string) => void
   editBody: string
@@ -596,6 +597,7 @@ type FocusViewProps = {
   scheduleAutoSave: (id: string, title: string, body: string) => void
   flushSave: (id: string, title: string, body: string) => void
   onCreateSubDrift: (title: string) => Promise<void>
+  onOpenDrift: (drift: SubDriftData) => void
   onBack: () => void
 }
 
@@ -603,13 +605,17 @@ const SLASH_OPTIONS = [
   { label: 'Add Sub Drift', action: 'add-sub-drift' as const },
 ]
 
-function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onCreateSubDrift, onBack }: FocusViewProps) {
+function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onCreateSubDrift, onOpenDrift, onBack }: FocusViewProps) {
   const [showSlashMenu, setShowSlashMenu] = useState(false)
   const [slashQuery, setSlashQuery]       = useState('')
   const [slashMenuIndex, setSlashMenuIndex] = useState(0)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const [bodyFocused, setBodyFocused]     = useState(false)
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
   const slashStartPos = useRef<number | null>(null)
+
+  // Reset display mode when navigating to a different drift
+  useEffect(() => { setBodyFocused(false) }, [drift.id])
 
   // Filter by first word only — text after first space is the sub-drift title, not a filter term
   const filterWord = slashQuery.split(' ')[0]
@@ -735,16 +741,57 @@ function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setE
           </p>
         )}
 
-        <textarea
-          ref={textareaRef}
-          value={editBody}
-          onChange={handleBodyChange}
-          onKeyDown={handleBodyKeyDown}
-          onBlur={() => flushSave(drift.id, editTitle, editBody)}
-          placeholder="Start writing…"
-          rows={20}
-          className="w-full resize-none text-base text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
-        />
+        {bodyFocused ? (
+          <textarea
+            ref={textareaRef}
+            autoFocus
+            value={editBody}
+            onChange={handleBodyChange}
+            onKeyDown={handleBodyKeyDown}
+            onBlur={() => {
+              flushSave(drift.id, editTitle, editBody)
+              setBodyFocused(false)
+            }}
+            placeholder="Start writing…"
+            rows={20}
+            className="w-full resize-none text-base text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
+          />
+        ) : (
+          <div
+            onClick={() => setBodyFocused(true)}
+            className="min-h-72 cursor-text text-base text-[#5A5850] leading-relaxed whitespace-pre-wrap"
+          >
+            {editBody ? (
+              editBody.split('\n').map((line, i, arr) => {
+                if (line.startsWith('↳ ')) {
+                  const title = line.slice(2).trim()
+                  const match = siblingDrifts.find(s => s.title === title)
+                  if (match) {
+                    return (
+                      <span key={i}>
+                        <span
+                          onClick={e => { e.stopPropagation(); onOpenDrift(match) }}
+                          className="text-[#4A4840] underline-offset-2 hover:underline cursor-pointer transition-colors duration-100"
+                        >
+                          {line}
+                        </span>
+                        {i < arr.length - 1 && '\n'}
+                      </span>
+                    )
+                  }
+                }
+                return (
+                  <span key={i}>
+                    {line || ' '}
+                    {i < arr.length - 1 && '\n'}
+                  </span>
+                )
+              })
+            ) : (
+              <span className="text-[#C8C5BE]">Start writing…</span>
+            )}
+          </div>
+        )}
       </div>
 
       {showSlashMenu && filteredOptions.length > 0 && (
@@ -1011,11 +1058,24 @@ function AppView() {
     }
   }
 
+  const focusTargetParentId = selectedParentDrift ? selectedParentDrift.id : selectedDrift?.id
+  const focusSiblingDrifts  = drifts.find(d => d.id === focusTargetParentId)?.children ?? []
+
+  const openDriftFromFocus = (target: SubDriftData) => {
+    if (!selectedDrift) return
+    flushSave(selectedDrift.id, editTitle, editBody)
+    const parentId    = selectedParentDrift ? selectedParentDrift.id    : selectedDrift.id
+    const parentTitle = selectedParentDrift ? selectedParentDrift.title : selectedDrift.title
+    setSelectedDrift(target)
+    setSelectedParentDrift({ id: parentId, title: parentTitle })
+  }
+
   if (focusMode && selectedDrift) {
     return (
       <FocusView
         drift={selectedDrift}
         parentTitle={selectedParentDrift?.title}
+        siblingDrifts={focusSiblingDrifts}
         editTitle={editTitle}
         setEditTitle={setEditTitle}
         editBody={editBody}
@@ -1023,6 +1083,7 @@ function AppView() {
         scheduleAutoSave={scheduleAutoSave}
         flushSave={flushSave}
         onCreateSubDrift={createSubDriftFromFocus}
+        onOpenDrift={openDriftFromFocus}
         onBack={() => {
           flushSave(selectedDrift.id, editTitle, editBody)
           setFocusMode(false)
@@ -1215,7 +1276,7 @@ function AppView() {
             onClick={() => setContextMenu(null)}
           />
           <div
-            className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-[120px]"
+            className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-30"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
             {/* Move to Done / Move to Open — parent drifts only, adapts to view */}
