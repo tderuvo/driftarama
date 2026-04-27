@@ -885,13 +885,21 @@ function AppView() {
                 onBlur={() => flushSave(selectedDrift.id, editTitle, editBody)}
                 className="flex-1 text-[1.05rem] font-semibold text-[#1C1C19] leading-snug bg-transparent border-none outline-none focus:outline-none"
               />
-              <button
-                onClick={() => setSelectedDrift(null)}
-                aria-label="Close"
-                className="text-[#B0ADA6] hover:text-[#5A5850] transition-colors duration-150 text-xl leading-none mt-0.5 shrink-0"
-              >
-                ×
-              </button>
+              <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                <button
+                  onClick={() => console.log('Focus clicked')}
+                  className="text-xs text-[#A8A49C] border border-[#DDDAD2] px-2.5 py-1 rounded-md hover:text-[#5A5850] hover:border-[#B8B4AC] transition-colors duration-150"
+                >
+                  Focus
+                </button>
+                <button
+                  onClick={() => setSelectedDrift(null)}
+                  aria-label="Close"
+                  className="text-[#B0ADA6] hover:text-[#5A5850] transition-colors duration-150 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
             {/* Description — read-only */}
