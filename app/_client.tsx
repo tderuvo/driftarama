@@ -605,20 +605,31 @@ const SLASH_OPTIONS = [
   { label: 'Add Sub Drift', action: 'add-sub-drift' as const },
 ]
 
-function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onCreateSubDrift, onOpenDrift, onBack }: FocusViewProps) {
-  const [showSlashMenu, setShowSlashMenu] = useState(false)
-  const [slashQuery, setSlashQuery]       = useState('')
-  const [slashMenuIndex, setSlashMenuIndex] = useState(0)
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
-  const [bodyFocused, setBodyFocused]     = useState(false)
+// ─── useSlashMenu ──────────────────────────────────────────────────────────────
+
+function useSlashMenu({
+  driftId,
+  editTitle,
+  editBody,
+  setEditBody,
+  scheduleAutoSave,
+  onCreateSubDrift,
+}: {
+  driftId: string
+  editTitle: string
+  editBody: string
+  setEditBody: (body: string) => void
+  scheduleAutoSave: (id: string, title: string, body: string) => void
+  onCreateSubDrift: (title: string) => Promise<void>
+}) {
+  const [showSlashMenu, setShowSlashMenu]     = useState(false)
+  const [slashQuery, setSlashQuery]           = useState('')
+  const [slashMenuIndex, setSlashMenuIndex]   = useState(0)
+  const [menuPos, setMenuPos]                 = useState({ top: 0, left: 0 })
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
   const slashStartPos = useRef<number | null>(null)
 
-  // Reset display mode when navigating to a different drift
-  useEffect(() => { setBodyFocused(false) }, [drift.id])
-
-  // Filter by first word only — text after first space is the sub-drift title, not a filter term
-  const filterWord = slashQuery.split(' ')[0]
+  const filterWord      = slashQuery.split(' ')[0]
   const filteredOptions = filterWord
     ? SLASH_OPTIONS.filter(o => o.label.toLowerCase().includes(filterWord.toLowerCase()))
     : SLASH_OPTIONS
@@ -632,18 +643,17 @@ function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle,
 
   const selectOption = (label: string) => {
     if (slashStartPos.current !== null) {
-      // Content is everything after the first (filter) word in the query
       const content = slashQuery.split(' ').slice(1).join(' ').trim()
-      const title = content || 'Untitled sub-drift'
+      const title   = content || 'Untitled sub-drift'
       const placeholder = `↳ ${title}`
 
-      const before = editBody.slice(0, slashStartPos.current)
-      const after  = editBody.slice(slashStartPos.current + 1 + slashQuery.length)
-      const newBody = before + placeholder + after
+      const before       = editBody.slice(0, slashStartPos.current)
+      const after        = editBody.slice(slashStartPos.current + 1 + slashQuery.length)
+      const newBody      = before + placeholder + after
       const newCursorPos = slashStartPos.current + placeholder.length
 
       setEditBody(newBody)
-      scheduleAutoSave(drift.id, editTitle, newBody)
+      scheduleAutoSave(driftId, editTitle, newBody)
 
       setTimeout(() => {
         if (textareaRef.current) {
@@ -652,11 +662,8 @@ function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle,
         }
       }, 0)
 
-      if (label === 'Add Sub Drift') {
-        onCreateSubDrift(title)
-      }
+      if (label === 'Add Sub Drift') onCreateSubDrift(title)
     }
-
     closeSlashMenu()
   }
 
@@ -665,7 +672,7 @@ function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle,
     const pos = e.target.selectionStart ?? val.length
 
     setEditBody(val)
-    scheduleAutoSave(drift.id, editTitle, val)
+    scheduleAutoSave(driftId, editTitle, val)
 
     if (showSlashMenu) {
       if (slashStartPos.current !== null && pos > slashStartPos.current) {
@@ -706,6 +713,44 @@ function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle,
       closeSlashMenu()
     }
   }
+
+  const SlashMenuNode = showSlashMenu && filteredOptions.length > 0 ? (
+    <>
+      <div className="fixed inset-0 z-40" onClick={closeSlashMenu} />
+      <div
+        className="fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-40"
+        style={{ top: menuPos.top, left: menuPos.left }}
+      >
+        {filteredOptions.map((opt, i) => (
+          <button
+            key={opt.action}
+            onMouseDown={e => { e.preventDefault(); selectOption(opt.label) }}
+            className={`w-full text-left text-sm px-4 py-1.5 transition-colors duration-100 ${i === slashMenuIndex ? 'bg-[#EEEAE0] text-[#2A2A27]' : 'text-[#3A3830] hover:bg-[#F0EDE4]'}`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </>
+  ) : null
+
+  return { textareaRef, handleBodyChange, handleBodyKeyDown, SlashMenuNode }
+}
+
+function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onCreateSubDrift, onOpenDrift, onBack }: FocusViewProps) {
+  const [bodyFocused, setBodyFocused] = useState(false)
+
+  // Reset display mode when navigating to a different drift
+  useEffect(() => { setBodyFocused(false) }, [drift.id])
+
+  const { textareaRef, handleBodyChange, handleBodyKeyDown, SlashMenuNode } = useSlashMenu({
+    driftId: drift.id,
+    editTitle,
+    editBody,
+    setEditBody,
+    scheduleAutoSave,
+    onCreateSubDrift,
+  })
 
   return (
     <div className="min-h-screen bg-[#FAF9F4]">
@@ -794,25 +839,7 @@ function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle,
         )}
       </div>
 
-      {showSlashMenu && filteredOptions.length > 0 && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={closeSlashMenu} />
-          <div
-            className="fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-40"
-            style={{ top: menuPos.top, left: menuPos.left }}
-          >
-            {filteredOptions.map((opt, i) => (
-              <button
-                key={opt.action}
-                onMouseDown={e => { e.preventDefault(); selectOption(opt.label) }}
-                className={`w-full text-left text-sm px-4 py-1.5 transition-colors duration-100 ${i === slashMenuIndex ? 'bg-[#EEEAE0] text-[#2A2A27]' : 'text-[#3A3830] hover:bg-[#F0EDE4]'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {SlashMenuNode}
     </div>
   )
 }
@@ -1058,6 +1085,15 @@ function AppView() {
     }
   }
 
+  const paneSlash = useSlashMenu({
+    driftId:          selectedDrift?.id ?? '',
+    editTitle,
+    editBody,
+    setEditBody,
+    scheduleAutoSave,
+    onCreateSubDrift: createSubDriftFromFocus,
+  })
+
   const focusTargetParentId = selectedParentDrift ? selectedParentDrift.id : selectedDrift?.id
   const focusSiblingDrifts  = drifts.find(d => d.id === focusTargetParentId)?.children ?? []
 
@@ -1228,11 +1264,10 @@ function AppView() {
 
             {/* Body — editable */}
             <textarea
+              ref={paneSlash.textareaRef}
               value={editBody}
-              onChange={e => {
-                setEditBody(e.target.value)
-                scheduleAutoSave(selectedDrift.id, editTitle, e.target.value)
-              }}
+              onChange={paneSlash.handleBodyChange}
+              onKeyDown={paneSlash.handleBodyKeyDown}
               onBlur={() => flushSave(selectedDrift.id, editTitle, editBody)}
               placeholder="Start writing notes…"
               rows={10}
@@ -1267,6 +1302,8 @@ function AppView() {
           </div>
         </aside>
       )}
+
+      {paneSlash.SlashMenuNode}
 
       {/* ── Context menu ── */}
       {contextMenu && (
