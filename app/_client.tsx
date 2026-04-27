@@ -737,6 +737,58 @@ function useSlashMenu({
   return { textareaRef, handleBodyChange, handleBodyKeyDown, SlashMenuNode }
 }
 
+// ─── BodyDisplay ──────────────────────────────────────────────────────────────
+
+function BodyDisplay({
+  body,
+  siblingDrifts,
+  onOpenDrift,
+  onFocus,
+  placeholder,
+  className,
+}: {
+  body: string
+  siblingDrifts: SubDriftData[]
+  onOpenDrift: (drift: SubDriftData) => void
+  onFocus: () => void
+  placeholder: string
+  className: string
+}) {
+  return (
+    <div onClick={onFocus} className={className}>
+      {body ? (
+        body.split('\n').map((line, i, arr) => {
+          if (line.startsWith('↳ ')) {
+            const title = line.slice(2).trim()
+            const match = siblingDrifts.find(s => s.title === title)
+            if (match) {
+              return (
+                <span key={i}>
+                  <span
+                    onClick={e => { e.stopPropagation(); onOpenDrift(match) }}
+                    className="text-[#4A4840] underline-offset-2 hover:underline cursor-pointer transition-colors duration-100"
+                  >
+                    {line}
+                  </span>
+                  {i < arr.length - 1 && '\n'}
+                </span>
+              )
+            }
+          }
+          return (
+            <span key={i}>
+              {line || ' '}
+              {i < arr.length - 1 && '\n'}
+            </span>
+          )
+        })
+      ) : (
+        <span className="text-[#C8C5BE]">{placeholder}</span>
+      )}
+    </div>
+  )
+}
+
 function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onCreateSubDrift, onOpenDrift, onBack }: FocusViewProps) {
   const [bodyFocused, setBodyFocused] = useState(false)
 
@@ -802,40 +854,14 @@ function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle,
             className="w-full resize-none text-base text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
           />
         ) : (
-          <div
-            onClick={() => setBodyFocused(true)}
+          <BodyDisplay
+            body={editBody}
+            siblingDrifts={siblingDrifts}
+            onOpenDrift={onOpenDrift}
+            onFocus={() => setBodyFocused(true)}
+            placeholder="Start writing…"
             className="min-h-72 cursor-text text-base text-[#5A5850] leading-relaxed whitespace-pre-wrap"
-          >
-            {editBody ? (
-              editBody.split('\n').map((line, i, arr) => {
-                if (line.startsWith('↳ ')) {
-                  const title = line.slice(2).trim()
-                  const match = siblingDrifts.find(s => s.title === title)
-                  if (match) {
-                    return (
-                      <span key={i}>
-                        <span
-                          onClick={e => { e.stopPropagation(); onOpenDrift(match) }}
-                          className="text-[#4A4840] underline-offset-2 hover:underline cursor-pointer transition-colors duration-100"
-                        >
-                          {line}
-                        </span>
-                        {i < arr.length - 1 && '\n'}
-                      </span>
-                    )
-                  }
-                }
-                return (
-                  <span key={i}>
-                    {line || ' '}
-                    {i < arr.length - 1 && '\n'}
-                  </span>
-                )
-              })
-            ) : (
-              <span className="text-[#C8C5BE]">Start writing…</span>
-            )}
-          </div>
+          />
         )}
       </div>
 
@@ -888,6 +914,7 @@ function AppView() {
   const [selectedParentDrift, setSelectedParentDrift] = useState<{ id: string; title: string } | null>(null)
   const [editTitle, setEditTitle]     = useState('')
   const [editBody, setEditBody]       = useState('')
+  const [paneBodyFocused, setPaneBodyFocused] = useState(false)
   const [isAdding, setIsAdding]       = useState(false)
   const [inputValue, setInputValue]   = useState('')
   const [isAddingSub, setIsAddingSub] = useState(false)
@@ -917,6 +944,7 @@ function AppView() {
     if (selectedDrift) {
       setEditTitle(selectedDrift.title)
       setEditBody(selectedDrift.body ?? '')
+      setPaneBodyFocused(false)
     }
   }, [selectedDrift?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1263,16 +1291,31 @@ function AppView() {
             )}
 
             {/* Body — editable */}
-            <textarea
-              ref={paneSlash.textareaRef}
-              value={editBody}
-              onChange={paneSlash.handleBodyChange}
-              onKeyDown={paneSlash.handleBodyKeyDown}
-              onBlur={() => flushSave(selectedDrift.id, editTitle, editBody)}
-              placeholder="Start writing notes…"
-              rows={10}
-              className="w-full resize-none text-sm text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
-            />
+            {paneBodyFocused ? (
+              <textarea
+                ref={paneSlash.textareaRef}
+                autoFocus
+                value={editBody}
+                onChange={paneSlash.handleBodyChange}
+                onKeyDown={paneSlash.handleBodyKeyDown}
+                onBlur={() => {
+                  flushSave(selectedDrift.id, editTitle, editBody)
+                  setPaneBodyFocused(false)
+                }}
+                placeholder="Start writing notes…"
+                rows={10}
+                className="w-full resize-none text-sm text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
+              />
+            ) : (
+              <BodyDisplay
+                body={editBody}
+                siblingDrifts={focusSiblingDrifts}
+                onOpenDrift={openDriftFromFocus}
+                onFocus={() => setPaneBodyFocused(true)}
+                placeholder="Start writing notes…"
+                className="min-h-28 cursor-text text-sm text-[#5A5850] leading-relaxed whitespace-pre-wrap"
+              />
+            )}
 
             {/* Sub-drift entry — parent drifts only */}
             {!selectedParentDrift && (
