@@ -984,11 +984,13 @@ function AppView() {
 
   const createSubDriftFromFocus = async (title: string) => {
     if (!selectedDrift) return
+    // If a sub-drift is focused, attach the new child to its parent (sibling), not to itself
+    const targetParentId = selectedParentDrift ? selectedParentDrift.id : selectedDrift.id
     try {
       const res = await fetch('/api/drifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, parentId: selectedDrift.id }),
+        body: JSON.stringify({ title, parentId: targetParentId }),
       })
       if (!res.ok) throw new Error('POST sub-drift (focus) failed')
       const data = await res.json()
@@ -999,9 +1001,8 @@ function AppView() {
         description: data.drift.description ?? null,
         highlight:   data.drift.highlight,
       }
-      // No-op if focused drift is itself a sub-drift (not in top-level drifts list)
       setDrifts(prev => prev.map(d =>
-        d.id === selectedDrift.id
+        d.id === targetParentId
           ? { ...d, children: [...d.children, newSub] }
           : d
       ))
