@@ -584,6 +584,71 @@ function AppNav({ activeView, onViewChange }: {
   )
 }
 
+// ─── Focus View ───────────────────────────────────────────────────────────────
+
+type FocusViewProps = {
+  drift: SubDriftData
+  parentTitle?: string
+  editTitle: string
+  setEditTitle: (t: string) => void
+  editBody: string
+  setEditBody: (b: string) => void
+  scheduleAutoSave: (id: string, title: string, body: string) => void
+  flushSave: (id: string, title: string, body: string) => void
+  onBack: () => void
+}
+
+function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onBack }: FocusViewProps) {
+  return (
+    <div className="min-h-screen bg-[#FAF9F4]">
+      <div className="sticky top-0 z-10 bg-[#FAF9F4]/95 backdrop-blur-sm border-b border-[#EAE7DE] px-6 h-12 flex items-center">
+        <button
+          onClick={onBack}
+          className="text-sm text-[#8A8880] hover:text-[#2A2A27] transition-colors duration-150 flex items-center gap-1.5"
+        >
+          <span>←</span>
+          <span>Back</span>
+        </button>
+      </div>
+
+      <div className="max-w-185 mx-auto px-8 pt-14 pb-24">
+        <input
+          type="text"
+          value={editTitle}
+          onChange={e => {
+            setEditTitle(e.target.value)
+            scheduleAutoSave(drift.id, e.target.value, editBody)
+          }}
+          onBlur={() => flushSave(drift.id, editTitle, editBody)}
+          className="w-full text-3xl md:text-4xl font-bold text-[#1C1C19] bg-transparent border-none outline-none focus:outline-none mb-3 leading-snug"
+        />
+
+        {parentTitle && (
+          <p className="text-xs text-[#B8B4AC] mb-8">Attached to: {parentTitle}</p>
+        )}
+
+        {drift.description && (
+          <p className="mb-8 text-base text-[#8A8880] leading-relaxed">
+            {drift.description}
+          </p>
+        )}
+
+        <textarea
+          value={editBody}
+          onChange={e => {
+            setEditBody(e.target.value)
+            scheduleAutoSave(drift.id, editTitle, e.target.value)
+          }}
+          onBlur={() => flushSave(drift.id, editTitle, editBody)}
+          placeholder="Start writing…"
+          rows={20}
+          className="w-full resize-none text-base text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
+        />
+      </div>
+    </div>
+  )
+}
+
 // ─── App View (authenticated main screen) ─────────────────────────────────────
 
 // ─── Drift Types ──────────────────────────────────────────────────────────────
@@ -591,15 +656,12 @@ function AppNav({ activeView, onViewChange }: {
 type SubDriftData = {
   id: string
   title: string
-  highlight: string
-}
-
-type DriftData = {
-  id: string
-  title: string
   body: string | null
   description: string | null
   highlight: string
+}
+
+type DriftData = SubDriftData & {
   children: SubDriftData[]
 }
 
@@ -627,7 +689,8 @@ function AppView() {
 
   const [activeView, setActiveView]   = useState<'open' | 'done'>('open')
   const [drifts, setDrifts]           = useState<DriftData[]>([])
-  const [selectedDrift, setSelectedDrift] = useState<DriftData | null>(null)
+  const [selectedDrift, setSelectedDrift] = useState<SubDriftData | null>(null)
+  const [selectedParentDrift, setSelectedParentDrift] = useState<{ id: string; title: string } | null>(null)
   const [editTitle, setEditTitle]     = useState('')
   const [editBody, setEditBody]       = useState('')
   const [isAdding, setIsAdding]       = useState(false)
@@ -635,11 +698,14 @@ function AppView() {
   const [isAddingSub, setIsAddingSub] = useState(false)
   const [subInputValue, setSubInputValue] = useState('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [focusMode, setFocusMode] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const switchView = (v: 'open' | 'done') => {
     setActiveView(v)
     setSelectedDrift(null)
+    setSelectedParentDrift(null)
+    setFocusMode(false)
     setIsAdding(false)
     setInputValue('')
   }
@@ -670,7 +736,10 @@ function AppView() {
         body: JSON.stringify(updates),
       })
       if (!res.ok) throw new Error('PATCH failed')
-      setDrifts(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d))
+      setDrifts(prev => prev.map(d => {
+        if (d.id === id) return { ...d, ...updates }
+        return { ...d, children: d.children.map(c => c.id === id ? { ...c, ...updates } : c) }
+      }))
       setSelectedDrift(prev => prev?.id === id ? { ...prev, ...updates } : prev)
     } catch (err) {
       console.error('Failed to save drift:', err)
@@ -733,9 +802,11 @@ function AppView() {
       if (!res.ok) throw new Error('POST sub-drift failed')
       const data = await res.json()
       const newSub: SubDriftData = {
-        id:        data.drift.id,
-        title:     data.drift.title,
-        highlight: data.drift.highlight,
+        id:          data.drift.id,
+        title:       data.drift.title,
+        body:        data.drift.body ?? null,
+        description: data.drift.description ?? null,
+        highlight:   data.drift.highlight,
       }
       setDrifts(prev => prev.map(d =>
         d.id === selectedDrift.id
@@ -790,6 +861,25 @@ function AppView() {
     }
   }
 
+  if (focusMode && selectedDrift) {
+    return (
+      <FocusView
+        drift={selectedDrift}
+        parentTitle={selectedParentDrift?.title}
+        editTitle={editTitle}
+        setEditTitle={setEditTitle}
+        editBody={editBody}
+        setEditBody={setEditBody}
+        scheduleAutoSave={scheduleAutoSave}
+        flushSave={flushSave}
+        onBack={() => {
+          flushSave(selectedDrift.id, editTitle, editBody)
+          setFocusMode(false)
+        }}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
       <AppNav activeView={activeView} onViewChange={switchView} />
@@ -834,7 +924,7 @@ function AppView() {
           {drifts.map((drift, i) => (
             <div
               key={drift.id}
-              onClick={() => setSelectedDrift(drift)}
+              onClick={() => { setSelectedDrift(drift); setSelectedParentDrift(null); setIsAddingSub(false) }}
               onContextMenu={e => openContextMenu(e, drift.id, null)}
               className="cursor-pointer group"
             >
@@ -850,11 +940,17 @@ function AppView() {
                 {drift.children.map((sub) => (
                   <div
                     key={sub.id}
+                    onClick={e => {
+                      e.stopPropagation()
+                      setSelectedDrift(sub)
+                      setSelectedParentDrift({ id: drift.id, title: drift.title })
+                      setIsAddingSub(false)
+                    }}
                     onContextMenu={e => openContextMenu(e, sub.id, drift.id)}
-                    className="flex items-baseline gap-2.5"
+                    className="flex items-baseline gap-2.5 cursor-pointer"
                   >
                     <span className="text-[#C8C5BE] text-xs shrink-0 select-none">•</span>
-                    <span className={`text-sm text-[#8A8880] leading-relaxed${sub.highlight !== 'none' ? ' ' + (highlightClass[sub.highlight] ?? '') : ''}`}>
+                    <span className={`text-sm text-[#8A8880] leading-relaxed hover:text-[#5A5850] transition-colors duration-100${sub.highlight !== 'none' ? ' ' + (highlightClass[sub.highlight] ?? '') : ''}`}>
                       {sub.title}
                     </span>
                   </div>
@@ -887,13 +983,13 @@ function AppView() {
               />
               <div className="flex items-center gap-2 shrink-0 mt-0.5">
                 <button
-                  onClick={() => console.log('Focus clicked')}
+                  onClick={() => setFocusMode(true)}
                   className="text-xs text-[#A8A49C] border border-[#DDDAD2] px-2.5 py-1 rounded-md hover:text-[#5A5850] hover:border-[#B8B4AC] transition-colors duration-150"
                 >
                   Focus
                 </button>
                 <button
-                  onClick={() => setSelectedDrift(null)}
+                  onClick={() => { setSelectedDrift(null); setSelectedParentDrift(null); setFocusMode(false) }}
                   aria-label="Close"
                   className="text-[#B0ADA6] hover:text-[#5A5850] transition-colors duration-150 text-xl leading-none"
                 >
@@ -901,6 +997,13 @@ function AppView() {
                 </button>
               </div>
             </div>
+
+            {/* Parent context — sub-drifts only */}
+            {selectedParentDrift && (
+              <p className="text-xs text-[#B8B4AC] -mt-4 mb-5">
+                Attached to: {selectedParentDrift.title}
+              </p>
+            )}
 
             {/* Description — read-only */}
             {selectedDrift.description && (
@@ -924,28 +1027,30 @@ function AppView() {
               className="w-full resize-none text-sm text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
             />
 
-            {/* Sub-drift entry */}
-            <div className="mt-8 pt-5 border-t border-[#EAE7DE]">
-              {isAddingSub ? (
-                <input
-                  autoFocus
-                  type="text"
-                  value={subInputValue}
-                  onChange={e => setSubInputValue(e.target.value)}
-                  onKeyDown={handleSubKeyDown}
-                  onBlur={handleSubBlur}
-                  placeholder="Type a next step…"
-                  className="w-full text-sm text-[#5A5850] bg-transparent border-b border-[#D8D5CC] outline-none placeholder:text-[#C8C5BE]"
-                />
-              ) : (
-                <button
-                  onClick={() => setIsAddingSub(true)}
-                  className="text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
-                >
-                  + Add sub-drift…
-                </button>
-              )}
-            </div>
+            {/* Sub-drift entry — parent drifts only */}
+            {!selectedParentDrift && (
+              <div className="mt-8 pt-5 border-t border-[#EAE7DE]">
+                {isAddingSub ? (
+                  <input
+                    autoFocus
+                    type="text"
+                    value={subInputValue}
+                    onChange={e => setSubInputValue(e.target.value)}
+                    onKeyDown={handleSubKeyDown}
+                    onBlur={handleSubBlur}
+                    placeholder="Type a next step…"
+                    className="w-full text-sm text-[#5A5850] bg-transparent border-b border-[#D8D5CC] outline-none placeholder:text-[#C8C5BE]"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setIsAddingSub(true)}
+                    className="text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
+                  >
+                    + Add sub-drift…
+                  </button>
+                )}
+              </div>
+            )}
 
           </div>
         </aside>
