@@ -595,6 +595,7 @@ type FocusViewProps = {
   setEditBody: (b: string) => void
   scheduleAutoSave: (id: string, title: string, body: string) => void
   flushSave: (id: string, title: string, body: string) => void
+  onCreateSubDrift: (title: string) => Promise<void>
   onBack: () => void
 }
 
@@ -602,7 +603,7 @@ const SLASH_OPTIONS = [
   { label: 'Add Sub Drift', action: 'add-sub-drift' as const },
 ]
 
-function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onBack }: FocusViewProps) {
+function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onCreateSubDrift, onBack }: FocusViewProps) {
   const [showSlashMenu, setShowSlashMenu] = useState(false)
   const [slashQuery, setSlashQuery]       = useState('')
   const [slashMenuIndex, setSlashMenuIndex] = useState(0)
@@ -644,10 +645,13 @@ function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setE
           textareaRef.current.setSelectionRange(newCursorPos, newCursorPos)
         }
       }, 0)
+
+      if (label === 'Add Sub Drift') {
+        onCreateSubDrift(title)
+      }
     }
 
     closeSlashMenu()
-    console.log('Slash action:', label)
   }
 
   const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -978,6 +982,34 @@ function AppView() {
     }
   }
 
+  const createSubDriftFromFocus = async (title: string) => {
+    if (!selectedDrift) return
+    try {
+      const res = await fetch('/api/drifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, parentId: selectedDrift.id }),
+      })
+      if (!res.ok) throw new Error('POST sub-drift (focus) failed')
+      const data = await res.json()
+      const newSub: SubDriftData = {
+        id:          data.drift.id,
+        title:       data.drift.title,
+        body:        data.drift.body ?? null,
+        description: data.drift.description ?? null,
+        highlight:   data.drift.highlight,
+      }
+      // No-op if focused drift is itself a sub-drift (not in top-level drifts list)
+      setDrifts(prev => prev.map(d =>
+        d.id === selectedDrift.id
+          ? { ...d, children: [...d.children, newSub] }
+          : d
+      ))
+    } catch (err) {
+      console.error('Failed to create sub-drift from Focus Mode:', err)
+    }
+  }
+
   if (focusMode && selectedDrift) {
     return (
       <FocusView
@@ -989,6 +1021,7 @@ function AppView() {
         setEditBody={setEditBody}
         scheduleAutoSave={scheduleAutoSave}
         flushSave={flushSave}
+        onCreateSubDrift={createSubDriftFromFocus}
         onBack={() => {
           flushSave(selectedDrift.id, editTitle, editBody)
           setFocusMode(false)
