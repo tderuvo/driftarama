@@ -598,7 +598,81 @@ type FocusViewProps = {
   onBack: () => void
 }
 
+const SLASH_OPTIONS = [
+  { label: 'Add Sub Drift', action: 'add-sub-drift' as const },
+]
+
 function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setEditBody, scheduleAutoSave, flushSave, onBack }: FocusViewProps) {
+  const [showSlashMenu, setShowSlashMenu] = useState(false)
+  const [slashQuery, setSlashQuery]       = useState('')
+  const [slashMenuIndex, setSlashMenuIndex] = useState(0)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const textareaRef   = useRef<HTMLTextAreaElement>(null)
+  const slashStartPos = useRef<number | null>(null)
+
+  const filteredOptions = slashQuery
+    ? SLASH_OPTIONS.filter(o => o.label.toLowerCase().includes(slashQuery.toLowerCase()))
+    : SLASH_OPTIONS
+
+  const closeSlashMenu = () => {
+    setShowSlashMenu(false)
+    setSlashQuery('')
+    setSlashMenuIndex(0)
+    slashStartPos.current = null
+  }
+
+  const selectOption = (label: string) => {
+    console.log('Slash action:', label)
+    closeSlashMenu()
+  }
+
+  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value
+    const pos = e.target.selectionStart ?? val.length
+
+    setEditBody(val)
+    scheduleAutoSave(drift.id, editTitle, val)
+
+    if (showSlashMenu) {
+      if (slashStartPos.current !== null && pos > slashStartPos.current) {
+        setSlashQuery(val.slice(slashStartPos.current + 1, pos))
+        setSlashMenuIndex(0)
+      } else {
+        closeSlashMenu()
+      }
+      return
+    }
+
+    if (val[pos - 1] === '/') {
+      slashStartPos.current = pos - 1
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect()
+        setMenuPos({ top: rect.top + 28, left: rect.left })
+      }
+      setShowSlashMenu(true)
+      setSlashQuery('')
+      setSlashMenuIndex(0)
+    }
+  }
+
+  const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!showSlashMenu) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSlashMenuIndex(i => Math.min(i + 1, filteredOptions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSlashMenuIndex(i => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const opt = filteredOptions[slashMenuIndex]
+      if (opt) selectOption(opt.label)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      closeSlashMenu()
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#FAF9F4]">
       <div className="sticky top-0 z-10 bg-[#FAF9F4]/95 backdrop-blur-sm border-b border-[#EAE7DE] px-6 h-12 flex items-center">
@@ -634,17 +708,36 @@ function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setE
         )}
 
         <textarea
+          ref={textareaRef}
           value={editBody}
-          onChange={e => {
-            setEditBody(e.target.value)
-            scheduleAutoSave(drift.id, editTitle, e.target.value)
-          }}
+          onChange={handleBodyChange}
+          onKeyDown={handleBodyKeyDown}
           onBlur={() => flushSave(drift.id, editTitle, editBody)}
           placeholder="Start writing…"
           rows={20}
           className="w-full resize-none text-base text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
         />
       </div>
+
+      {showSlashMenu && filteredOptions.length > 0 && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={closeSlashMenu} />
+          <div
+            className="fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-40"
+            style={{ top: menuPos.top, left: menuPos.left }}
+          >
+            {filteredOptions.map((opt, i) => (
+              <button
+                key={opt.action}
+                onMouseDown={e => { e.preventDefault(); selectOption(opt.label) }}
+                className={`w-full text-left text-sm px-4 py-1.5 transition-colors duration-100 ${i === slashMenuIndex ? 'bg-[#EEEAE0] text-[#2A2A27]' : 'text-[#3A3830] hover:bg-[#F0EDE4]'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
