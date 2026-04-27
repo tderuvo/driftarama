@@ -610,8 +610,10 @@ function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setE
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
   const slashStartPos = useRef<number | null>(null)
 
-  const filteredOptions = slashQuery
-    ? SLASH_OPTIONS.filter(o => o.label.toLowerCase().includes(slashQuery.toLowerCase()))
+  // Filter by first word only — text after first space is the sub-drift title, not a filter term
+  const filterWord = slashQuery.split(' ')[0]
+  const filteredOptions = filterWord
+    ? SLASH_OPTIONS.filter(o => o.label.toLowerCase().includes(filterWord.toLowerCase()))
     : SLASH_OPTIONS
 
   const closeSlashMenu = () => {
@@ -622,8 +624,30 @@ function FocusView({ drift, parentTitle, editTitle, setEditTitle, editBody, setE
   }
 
   const selectOption = (label: string) => {
-    console.log('Slash action:', label)
+    if (slashStartPos.current !== null) {
+      // Content is everything after the first (filter) word in the query
+      const content = slashQuery.split(' ').slice(1).join(' ').trim()
+      const title = content || 'Untitled sub-drift'
+      const placeholder = `↳ ${title}`
+
+      const before = editBody.slice(0, slashStartPos.current)
+      const after  = editBody.slice(slashStartPos.current + 1 + slashQuery.length)
+      const newBody = before + placeholder + after
+      const newCursorPos = slashStartPos.current + placeholder.length
+
+      setEditBody(newBody)
+      scheduleAutoSave(drift.id, editTitle, newBody)
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus()
+          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos)
+        }
+      }, 0)
+    }
+
     closeSlashMenu()
+    console.log('Slash action:', label)
   }
 
   const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
