@@ -17,6 +17,11 @@ export async function initUser(clerkUserId: string, email?: string | null) {
 
   if (existing) return existing
 
+  // Fetch the How to Drift template; fall back to safe defaults if missing
+  const template = await prisma.driftTemplate.findUnique({ where: { name: 'how_to_drift' } })
+  const starterTitle = template?.title ?? 'How to Drift'
+  const starterBody  = template?.body  ?? 'Welcome to Driftarama.'
+
   // First login — create everything in a transaction so it's all-or-nothing
   try {
     return await prisma.$transaction(async (tx) => {
@@ -44,13 +49,13 @@ export async function initUser(clerkUserId: string, email?: string | null) {
         ],
       })
 
-      // 3. Starter drift under Open
+      // 3. Starter drift under Open — content driven by DriftTemplate
       await tx.drift.create({
         data: {
           userId:    user.id,
           parentId:  openDrift.id,
-          title:     'How to Drift',
-          body:      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Use this space to understand how Driftarama works, or delete this drift and start fresh.',
+          title:     starterTitle,
+          body:      starterBody,
           driftRole: 'normal',
           highlight: 'none',
           sortOrder: 0,
