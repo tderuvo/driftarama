@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { TemplateEditor } from './_editor'
 
 export default async function AdminPage() {
   const { userId: clerkUserId } = await auth()
@@ -13,6 +14,10 @@ export default async function AdminPage() {
   if (!user || user.role !== 'admin') {
     return <AccessDenied />
   }
+
+  const template = await prisma.driftTemplate.findUnique({
+    where: { name: 'how_to_drift' },
+  })
 
   return (
     <main className="min-h-screen bg-[#FAF8F3] text-[#1C1C19]">
@@ -29,14 +34,7 @@ export default async function AdminPage() {
           Internal tools for managing Driftarama.
         </p>
 
-        <div className="border border-[#E8E5DC] rounded-2xl p-8 bg-white">
-          <p className="text-sm font-semibold text-[#A8A49C] uppercase tracking-widest mb-2">
-            Coming next
-          </p>
-          <p className="text-base text-[#3A3830]">
-            How to Drift template editor.
-          </p>
-        </div>
+        <TemplateEditor template={template} />
 
       </div>
     </main>
