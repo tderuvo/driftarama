@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { Show, UserButton, SignInButton, useUser } from '@clerk/nextjs'
 
@@ -931,8 +931,10 @@ function AppView() {
   const [isAddingSub, setIsAddingSub] = useState(false)
   const [subInputValue, setSubInputValue] = useState('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [menuPos, setMenuPos]         = useState({ top: 0, left: 0 })
   const [focusMode, setFocusMode] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debounceRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
 
   const switchView = (v: 'open' | 'done' | 'universe') => {
     setActiveView(v)
@@ -1079,8 +1081,24 @@ function AppView() {
   const openContextMenu = (e: React.MouseEvent, driftId: string, parentId: string | null) => {
     e.preventDefault()
     e.stopPropagation()
+    // Seed with raw position; useLayoutEffect will clamp before first paint
+    setMenuPos({ top: e.clientY, left: e.clientX })
     setContextMenu({ driftId, parentId, x: e.clientX, y: e.clientY })
   }
+
+  // Clamp the context menu to the viewport before the browser paints.
+  // useLayoutEffect runs synchronously after the DOM update so the user
+  // never sees the unclamped position.
+  useLayoutEffect(() => {
+    if (!contextMenu || !contextMenuRef.current) return
+    const MARGIN = 8
+    const { width, height } = contextMenuRef.current.getBoundingClientRect()
+    let x = contextMenu.x
+    let y = contextMenu.y
+    if (x + width  + MARGIN > window.innerWidth)  x = window.innerWidth  - width  - MARGIN
+    if (y + height + MARGIN > window.innerHeight) y = window.innerHeight - height - MARGIN
+    setMenuPos({ top: Math.max(MARGIN, y), left: Math.max(MARGIN, x) })
+  }, [contextMenu])
 
   const applyHighlight = async (highlight: string) => {
     if (!contextMenu) return
@@ -1378,8 +1396,9 @@ function AppView() {
             onClick={() => setContextMenu(null)}
           />
           <div
+            ref={contextMenuRef}
             className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-30"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
+            style={{ top: menuPos.top, left: menuPos.left }}
           >
             {/* Move to Done / Move to Open — parent drifts only, not shown in Universe */}
             {contextMenu.parentId === null && activeView !== 'universe' && (
