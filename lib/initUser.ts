@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 /**
@@ -15,7 +16,21 @@ export async function initUser(clerkUserId: string, email?: string | null) {
     throw error
   }
 
-  if (existing) return existing
+  if (existing) {
+    // Admin-only: backfill the Universe system drift if the user was promoted
+    // to admin after their account was already created.
+    if (existing.role === 'admin') {
+      const hasUniverse = await prisma.drift.findFirst({
+        where: { userId: existing.id, driftRole: 'system', title: 'The Universe', deletedAt: null },
+      })
+      if (!hasUniverse) {
+        await prisma.drift.create({
+          data: { userId: existing.id, title: 'The Universe', driftRole: 'system' },
+        })
+      }
+    }
+    return existing
+  }
 
   // Fetch the How to Drift template; fall back to safe defaults if missing
   const template = await prisma.driftTemplate.findUnique({ where: { name: 'how_to_drift' } })
@@ -42,12 +57,15 @@ export async function initUser(clerkUserId: string, email?: string | null) {
         },
       })
 
-      await tx.drift.createMany({
-        data: [
-          { userId: user.id, title: 'Done',        driftRole: 'system' },
-          { userId: user.id, title: 'Drifting In', driftRole: 'system' },
-        ],
-      })
+      const systemDrifts: Prisma.DriftCreateManyInput[] = [
+        { userId: user.id, title: 'Done',        driftRole: 'system' },
+        { userId: user.id, title: 'Drifting In', driftRole: 'system' },
+      ]
+      // Admin-only system drift — only created for admin users
+      if (user.role === 'admin') {
+        systemDrifts.push({ userId: user.id, title: 'The Universe', driftRole: 'system' })
+      }
+      await tx.drift.createMany({ data: systemDrifts })
 
       // 3. Starter drift under Open — content driven by DriftTemplate
       await tx.drift.create({

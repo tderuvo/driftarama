@@ -10,12 +10,37 @@ export async function GET(request: Request) {
   }
 
   const view = new URL(request.url).searchParams.get('view')
-  const systemTitle = view === 'done' ? 'Done' : 'Open'
 
   const user = await prisma.user.findUnique({ where: { clerkUserId } })
   if (!user) {
     return NextResponse.json({ drifts: [] })
   }
+
+  // Admin-only: The Universe view
+  if (view === 'universe') {
+    if (user.role !== 'admin') {
+      return NextResponse.json({ drifts: [] }, { status: 403 })
+    }
+    const universeDrift = await prisma.drift.findFirst({
+      where: { userId: user.id, driftRole: 'system', title: 'The Universe', deletedAt: null },
+    })
+    if (!universeDrift) {
+      return NextResponse.json({ drifts: [] })
+    }
+    const drifts = await prisma.drift.findMany({
+      where:    { userId: user.id, parentId: universeDrift.id, deletedAt: null },
+      orderBy:  [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      include:  {
+        children: {
+          where:   { deletedAt: null },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+      },
+    })
+    return NextResponse.json({ drifts })
+  }
+
+  const systemTitle = view === 'done' ? 'Done' : 'Open'
 
   const openDrift = await prisma.drift.findFirst({
     where: {
@@ -63,6 +88,7 @@ export async function POST(request: Request) {
   const body = await request.json()
   const title    = typeof body.title    === 'string' ? body.title.trim()    : ''
   const parentId = typeof body.parentId === 'string' ? body.parentId.trim() : null
+  const view     = typeof body.view     === 'string' ? body.view             : null
 
   if (!title) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
@@ -73,7 +99,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
-  // Determine the parent: explicit parentId (sub-drift) or the Open system drift (top-level)
+  // Determine the parent: explicit parentId (sub-drift), Universe system drift,
+  // or the Open system drift (default top-level)
   let resolvedParentId: string
 
   if (parentId) {
@@ -84,6 +111,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Parent drift not found' }, { status: 404 })
     }
     resolvedParentId = parentId
+  } else if (view === 'universe') {
+    // Admin-only: top-level drift goes under The Universe system drift
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    const universeDrift = await prisma.drift.findFirst({
+      where: { userId: user.id, driftRole: 'system', title: 'The Universe', deletedAt: null },
+    })
+    if (!universeDrift) {
+      return NextResponse.json({ error: 'Universe drift not found' }, { status: 404 })
+    }
+    resolvedParentId = universeDrift.id
   } else {
     const openDrift = await prisma.drift.findFirst({
       where: { userId: user.id, driftRole: 'system', title: 'Open', deletedAt: null },

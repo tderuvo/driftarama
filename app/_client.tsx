@@ -527,9 +527,10 @@ function Footer() {
 
 // ─── App Nav (authenticated) ──────────────────────────────────────────────────
 
-function AppNav({ activeView, onViewChange }: {
-  activeView: 'open' | 'done'
-  onViewChange: (v: 'open' | 'done') => void
+function AppNav({ activeView, onViewChange, isAdmin }: {
+  activeView: 'open' | 'done' | 'universe'
+  onViewChange: (v: 'open' | 'done' | 'universe') => void
+  isAdmin: boolean
 }) {
   return (
     <header className="no-print sticky top-0 z-50 bg-[#FAF8F3]/95 backdrop-blur-sm border-b border-[#EAE7DE]">
@@ -552,6 +553,15 @@ function AppNav({ activeView, onViewChange }: {
             >
               Done
             </button>
+            {/* Admin-only tab — not rendered for non-admin users */}
+            {isAdmin && (
+              <button
+                onClick={() => onViewChange('universe')}
+                className={`text-sm font-medium px-3 py-1 rounded-md transition-colors duration-150 ${activeView === 'universe' ? 'text-[#2A2A27] bg-[#EEEAE0]' : 'text-[#A8A49C] hover:bg-[#F0EDE4] hover:text-[#6B6860]'}`}
+              >
+                The Universe
+              </button>
+            )}
           </div>
         </div>
 
@@ -908,7 +918,8 @@ function AppView() {
     day: 'numeric',
   }).format(new Date())
 
-  const [activeView, setActiveView]   = useState<'open' | 'done'>('open')
+  const [activeView, setActiveView]   = useState<'open' | 'done' | 'universe'>('open')
+  const [isAdmin, setIsAdmin]         = useState(false)
   const [drifts, setDrifts]           = useState<DriftData[]>([])
   const [selectedDrift, setSelectedDrift] = useState<SubDriftData | null>(null)
   const [selectedParentDrift, setSelectedParentDrift] = useState<{ id: string; title: string } | null>(null)
@@ -923,7 +934,7 @@ function AppView() {
   const [focusMode, setFocusMode] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const switchView = (v: 'open' | 'done') => {
+  const switchView = (v: 'open' | 'done' | 'universe') => {
     setActiveView(v)
     setSelectedDrift(null)
     setSelectedParentDrift(null)
@@ -931,6 +942,14 @@ function AppView() {
     setIsAdding(false)
     setInputValue('')
   }
+
+  // Fetch current user's role once on mount to gate admin-only UI
+  useEffect(() => {
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(data => setIsAdmin(data.role === 'admin'))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch(`/api/drifts?view=${activeView}`)
@@ -986,10 +1005,13 @@ function AppView() {
 
   const submitDrift = async (title: string) => {
     try {
+      // Pass view so the API knows which system drift to parent under
+      const payload: Record<string, string> = { title }
+      if (activeView === 'universe') payload.view = 'universe'
       const res = await fetch('/api/drifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('POST /api/drifts failed')
       const data = await res.json()
@@ -1158,7 +1180,7 @@ function AppView() {
 
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
-      <AppNav activeView={activeView} onViewChange={switchView} />
+      <AppNav activeView={activeView} onViewChange={switchView} isAdmin={isAdmin} />
       <main className="max-w-180 mx-auto px-6 md:px-10 pt-12 pb-28 bg-[#FAF9F4] min-h-[calc(100vh-3.5rem)] shadow-[0_1px_16px_rgba(40,36,28,0.07),0_0_0_1px_rgba(40,36,28,0.04)] print:bg-white print:shadow-none print:max-w-none print:px-10 print:pt-8">
 
         <div className="print-area">
@@ -1191,7 +1213,7 @@ function AppView() {
               onClick={() => setIsAdding(true)}
               className="pl-8 text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
             >
-              + Add a drift…
+              {activeView === 'universe' ? '+ Drift something into the Universe…' : '+ Add a drift…'}
             </button>
           )}
         </div>
@@ -1359,8 +1381,8 @@ function AppView() {
             className="no-print fixed z-50 bg-[#FAF9F4] border border-[#E4E1D7] rounded-lg shadow-md py-1 min-w-30"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
-            {/* Move to Done / Move to Open — parent drifts only, adapts to view */}
-            {contextMenu.parentId === null && (
+            {/* Move to Done / Move to Open — parent drifts only, not shown in Universe */}
+            {contextMenu.parentId === null && activeView !== 'universe' && (
               <>
                 <button
                   onClick={() => {
