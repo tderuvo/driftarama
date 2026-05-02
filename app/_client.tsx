@@ -1280,13 +1280,13 @@ function AppView() {
 
       </main>
 
-      {/* ── Detail pane ── */}
+      {/* ── Drift Panel ── */}
       {selectedDrift && (
         <aside className="no-print fixed top-14 right-0 bottom-0 w-80 bg-[#FAF9F4] border-l border-[#EAE7DE] z-40 overflow-y-auto">
           <div className="pt-10 px-7 pb-16">
 
-            {/* Title — editable */}
-            <div className="flex items-start justify-between gap-4 mb-7">
+            {/* Drift Panel header: title (shrinkable) + controls (fixed) */}
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-7">
               <input
                 type="text"
                 value={editTitle}
@@ -1295,7 +1295,7 @@ function AppView() {
                   scheduleAutoSave(selectedDrift.id, e.target.value, editBody)
                 }}
                 onBlur={() => flushSave(selectedDrift.id, editTitle, editBody)}
-                className="flex-1 text-[1.05rem] font-semibold text-[#1C1C19] leading-snug bg-transparent border-none outline-none focus:outline-none"
+                className="flex-1 min-w-0 text-[1.05rem] font-semibold text-[#1C1C19] leading-snug bg-transparent border-none outline-none focus:outline-none"
               />
               <div className="flex items-center gap-2 shrink-0 mt-0.5">
                 <button
