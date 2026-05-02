@@ -1321,45 +1321,9 @@ function AppView() {
               </p>
             )}
 
-            {/* Description — read-only */}
-            {selectedDrift.description && (
-              <div className="bg-[#F0EDE4] rounded-xl px-4 py-3 mb-5">
-                <p className="text-sm text-[#6B6860] leading-relaxed">
-                  {selectedDrift.description}
-                </p>
-              </div>
-            )}
-
-            {/* Body — editable */}
-            {paneBodyFocused ? (
-              <textarea
-                ref={paneSlash.textareaRef}
-                autoFocus
-                value={editBody}
-                onChange={paneSlash.handleBodyChange}
-                onKeyDown={paneSlash.handleBodyKeyDown}
-                onBlur={() => {
-                  flushSave(selectedDrift.id, editTitle, editBody)
-                  setPaneBodyFocused(false)
-                }}
-                placeholder="Start writing notes…"
-                rows={10}
-                className="w-full resize-none text-sm text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
-              />
-            ) : (
-              <BodyDisplay
-                body={editBody}
-                siblingDrifts={focusSiblingDrifts}
-                onOpenDrift={openDriftFromFocus}
-                onFocus={() => setPaneBodyFocused(true)}
-                placeholder="Start writing notes…"
-                className="min-h-28 cursor-text text-sm text-[#5A5850] leading-relaxed whitespace-pre-wrap"
-              />
-            )}
-
-            {/* Sub-drift entry — parent drifts only */}
+            {/* Sub-drift entry — parent drifts only, sits near the top */}
             {!selectedParentDrift && (
-              <div className="mt-8 pt-5 border-t border-[#EAE7DE]">
+              <div className="mb-3">
                 {isAddingSub ? (
                   <input
                     autoFocus
@@ -1374,12 +1338,65 @@ function AppView() {
                 ) : (
                   <button
                     onClick={() => setIsAddingSub(true)}
-                    className="text-sm text-[#8A8880] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
+                    className="text-sm text-[#6B6860] hover:text-[#3A3830] hover:underline underline-offset-2 transition-colors duration-150"
                   >
                     + Add sub-drift…
                   </button>
                 )}
               </div>
+            )}
+
+            {/* Divider — separates action row from notes body */}
+            {!selectedParentDrift && (
+              <div className="border-t border-[#EAE7DE] mb-5" />
+            )}
+
+            {/* Description — read-only */}
+            {selectedDrift.description && (
+              <div className="bg-[#F0EDE4] rounded-xl px-4 py-3 mb-5">
+                <p className="text-sm text-[#6B6860] leading-relaxed">
+                  {selectedDrift.description}
+                </p>
+              </div>
+            )}
+
+            {/* Body / notes — expands to fill available panel space */}
+            {paneBodyFocused ? (
+              <textarea
+                ref={paneSlash.textareaRef}
+                autoFocus
+                value={editBody}
+                onChange={paneSlash.handleBodyChange}
+                onKeyDown={paneSlash.handleBodyKeyDown}
+                onInput={e => {
+                  // Auto-grow: let the panel scroll rather than the textarea
+                  const el = e.currentTarget
+                  el.style.height = 'auto'
+                  el.style.height = `${el.scrollHeight}px`
+                }}
+                onFocus={e => {
+                  // Set correct height when the textarea first mounts (autoFocus)
+                  const el = e.currentTarget
+                  el.style.height = 'auto'
+                  el.style.height = `${el.scrollHeight}px`
+                }}
+                onBlur={() => {
+                  flushSave(selectedDrift.id, editTitle, editBody)
+                  setPaneBodyFocused(false)
+                }}
+                placeholder="Start writing notes…"
+                style={{ minHeight: '12rem', overflow: 'hidden' }}
+                className="w-full resize-none text-sm text-[#5A5850] leading-relaxed bg-transparent border-none outline-none focus:outline-none placeholder:text-[#C8C5BE]"
+              />
+            ) : (
+              <BodyDisplay
+                body={editBody}
+                siblingDrifts={focusSiblingDrifts}
+                onOpenDrift={openDriftFromFocus}
+                onFocus={() => setPaneBodyFocused(true)}
+                placeholder="Start writing notes…"
+                className="min-h-48 cursor-text text-sm text-[#5A5850] leading-relaxed whitespace-pre-wrap"
+              />
             )}
 
           </div>
