@@ -567,10 +567,7 @@ function AppNav({ activeView, onViewChange, isAdmin }: {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              // Future: make print context-aware for selected drift notes
-              window.print()
-            }}
+            onClick={() => window.print()}
             className="text-[#B0ACA4] hover:text-[#5A5850] hover:bg-[#F0EDE4] p-1.5 rounded-md transition-colors duration-150"
             aria-label="Print"
           >
@@ -816,13 +813,26 @@ function FocusView({ drift, parentTitle, siblingDrifts, editTitle, setEditTitle,
 
   return (
     <div className="min-h-screen bg-[#FAF9F4]">
-      <div className="sticky top-0 z-10 bg-[#FAF9F4]/95 backdrop-blur-sm border-b border-[#EAE7DE] px-6 h-12 flex items-center">
+      {/* no-print: hide nav chrome when printing Focus Mode */}
+      <div className="no-print sticky top-0 z-10 bg-[#FAF9F4]/95 backdrop-blur-sm border-b border-[#EAE7DE] px-6 h-12 flex items-center justify-between">
         <button
           onClick={onBack}
           className="text-sm text-[#8A8880] hover:text-[#2A2A27] transition-colors duration-150 flex items-center gap-1.5"
         >
           <span>←</span>
           <span>Back</span>
+        </button>
+        <button
+          onClick={() => window.print()}
+          className="text-[#B0ACA4] hover:text-[#5A5850] hover:bg-[#F0EDE4] p-1.5 rounded-md transition-colors duration-150"
+          aria-label="Print"
+        >
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <path d="M4.5 5V2.5h6V5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="1.5" y="5" width="12" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+            <rect x="4.5" y="9" width="6" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.3" fill="white" />
+            <circle cx="11.5" cy="8" r="0.7" fill="currentColor" />
+          </svg>
         </button>
       </div>
 
@@ -1174,6 +1184,13 @@ function AppView() {
     setSelectedParentDrift({ id: parentId, title: parentTitle })
   }
 
+  // Direct children of the selected top-level drift — used by the print container.
+  // Empty for sub-drifts (they have no children in the data model).
+  const driftPrintChildren: SubDriftData[] =
+    selectedDrift && !selectedParentDrift
+      ? (drifts.find(d => d.id === selectedDrift.id)?.children ?? [])
+      : []
+
   if (focusMode && selectedDrift) {
     return (
       <FocusView
@@ -1199,7 +1216,8 @@ function AppView() {
   return (
     <div className="min-h-screen bg-[#E8E3D8] print:bg-white">
       <AppNav activeView={activeView} onViewChange={switchView} isAdmin={isAdmin} />
-      <main className="max-w-180 mx-auto px-6 md:px-10 pt-12 pb-28 bg-[#FAF9F4] min-h-[calc(100vh-3.5rem)] shadow-[0_1px_16px_rgba(40,36,28,0.07),0_0_0_1px_rgba(40,36,28,0.04)] print:bg-white print:shadow-none print:max-w-none print:px-10 print:pt-8">
+      {/* no-print added when a drift is selected so the list is suppressed on print */}
+      <main className={`max-w-180 mx-auto px-6 md:px-10 pt-12 pb-28 bg-[#FAF9F4] min-h-[calc(100vh-3.5rem)] shadow-[0_1px_16px_rgba(40,36,28,0.07),0_0_0_1px_rgba(40,36,28,0.04)] print:bg-white print:shadow-none print:max-w-none print:px-10 print:pt-8${selectedDrift ? ' no-print' : ''}`}>
 
         <div className="print-area">
 
@@ -1484,6 +1502,46 @@ function AppView() {
             </button>
           </div>
         </>
+      )}
+
+      {/* ── Drift print container ─────────────────────────────────────────────
+          Screen: always hidden (display:none via .drift-print-container CSS).
+          Print:  visible only when this node is in the DOM, i.e. when a drift
+                  is selected. The main list is suppressed via no-print on
+                  <main> above, so only this content reaches the printer.
+      ──────────────────────────────────────────────────────────────────────── */}
+      {selectedDrift && (
+        <div className="drift-print-container">
+          <h1 className="drift-print-title">{editTitle}</h1>
+
+          {selectedParentDrift && (
+            <p className="drift-print-parent">Attached to: {selectedParentDrift.title}</p>
+          )}
+
+          {selectedDrift.description && (
+            <p className="drift-print-description">{selectedDrift.description}</p>
+          )}
+
+          {editBody && (
+            <div className="drift-print-body">{editBody}</div>
+          )}
+
+          {driftPrintChildren.length > 0 && (
+            <>
+              <p className="drift-print-children-label">Sub-drifts</p>
+              <ul className="drift-print-children">
+                {driftPrintChildren.map(child => (
+                  <li
+                    key={child.id}
+                    className={`drift-print-child${child.highlight !== 'none' ? ' ' + (highlightClass[child.highlight] ?? '') : ''}`}
+                  >
+                    {child.title}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       )}
 
     </div>
